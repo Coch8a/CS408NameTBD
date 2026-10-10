@@ -1,5 +1,0 @@
-# AWS private keys
-*.pem
-
-# Environment variables and passwords
-.env
