@@ -1,0 +1,13 @@
+# Credentials
+*.pem
+.env
+.env.*
+!.env.example
+
+# Generated output and editor files
+target/
+*.log
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

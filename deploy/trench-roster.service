@@ -1,0 +1,21 @@
+[Unit]
+Description=Trench Crusade Roster Builder
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=trench-roster
+Group=trench-roster
+StateDirectory=trench-roster
+WorkingDirectory=/var/lib/trench-roster
+ExecStart=/usr/bin/java -Xms64m -Xmx256m -jar /opt/trench-roster/app.jar
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
