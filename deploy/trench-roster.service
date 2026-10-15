@@ -1,6 +1,7 @@
 [Unit]
 Description=Trench Crusade Roster Builder
-After=network.target
+After=network.target postgresql.service
+Requires=postgresql.service
 StartLimitIntervalSec=0
 
 [Service]
@@ -9,6 +10,7 @@ User=trench-roster
 Group=trench-roster
 StateDirectory=trench-roster
 WorkingDirectory=/var/lib/trench-roster
+EnvironmentFile=/etc/trench-roster/environment
 ExecStart=/usr/bin/java -Xms64m -Xmx256m -jar /opt/trench-roster/app.jar
 Restart=always
 RestartSec=5

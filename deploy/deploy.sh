@@ -21,8 +21,8 @@ done
 key="$(realpath "$key")"
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 ./start.sh --check
-echo "Running local HTTP endpoint tests..."
-mvn -B -ntp verify
+echo "Running frontend and real PostgreSQL integration tests..."
+./test.sh
 
 # Preserve spaces in the local key path when rsync invokes SSH.
 ssh_wrapper="$(mktemp)"
@@ -30,7 +30,7 @@ trap 'rm -f "$ssh_wrapper"' EXIT
 printf '#!/usr/bin/env bash\nexec ssh -i %q -o IdentitiesOnly=yes "$@"\n' "$key" > "$ssh_wrapper"
 chmod 700 "$ssh_wrapper"
 remote="ubuntu@$host"
-"$ssh_wrapper" "$remote" 'test -d /opt/trench-roster/source' ||
+"$ssh_wrapper" "$remote" 'test -d /opt/trench-roster/source && sudo test -f /etc/trench-roster/environment' ||
   fail "Cannot access the app directory. Check SSH and run setup-ec2.sh first."
 
 echo "Copying source to the dedicated deployment directory..."
@@ -39,14 +39,14 @@ echo "Copying source to the dedicated deployment directory..."
 rsync -az --delete --chmod=D755,F644 -e "$ssh_wrapper" \
   --exclude='.git/' --exclude='target/' --exclude='*.pem' \
   --exclude='.env' --exclude='.env.*' --exclude='.idea/' \
-  --exclude='*.log' --exclude='node_modules/' \
+  --exclude='*.zip' --exclude='*.log' --exclude='node_modules/' --exclude='.local/' --exclude='frontend/dist/' \
   ./ "$remote:/opt/trench-roster/source/"
 
 echo "Building on EC2 and restarting the service..."
 "$ssh_wrapper" "$remote" 'bash -se' <<'REMOTE'
 set -euo pipefail
 cd /opt/trench-roster/source
-chmod +x start.sh deploy/*.sh
+chmod +x start.sh test.sh scripts/*.sh deploy/*.sh
 # Limit Maven's heap on the small class instance; the running app has its own cap.
 export MAVEN_OPTS="-Xmx256m"
 ./start.sh --build-only

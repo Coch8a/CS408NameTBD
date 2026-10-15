@@ -1,40 +1,32 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Use the repository root even when invoked from another directory.
-cd "$(dirname "${BASH_SOURCE[0]}")"
-fail() { echo "ERROR: $*" >&2; exit 1; }
+source "$(dirname "${BASH_SOURCE[0]}")/scripts/common.sh"
+cd "$CP_ROOT"
 mode="${1:-run}"
-case "$mode" in
-  run|--check|--build-only) ;;
-  *) fail "Usage: ./start.sh [--check|--build-only]" ;;
-esac
-
-# System tools are prerequisites; Maven installs the project dependencies.
-for tool in java javac mvn sed sort head; do
-  command -v "$tool" >/dev/null 2>&1 ||
-    fail "Missing $tool. Install JDK 21 and Maven 3.6.3+; see README.md."
-done
-java_info="$(java -version 2>&1)"
-javac_info="$(javac -version 2>&1)"
-[[ "$java_info" =~ version\ \"21[.\"] ]] || fail "Java 21 is required. Check java -version."
-[[ "$javac_info" =~ javac\ 21([.]|$) ]] || fail "JDK 21 is required. Check javac -version."
-maven_info="$(mvn -version 2>&1)" || fail "Maven could not start. Check JAVA_HOME and mvn -version."
-maven_info="$(printf '%s\n' "$maven_info" | sed $'s/\033\\[[0-9;]*m//g')"
-[[ "$maven_info" =~ Java\ version:\ 21([.,]|$) ]] ||
-  fail "Maven must use JDK 21. Check JAVA_HOME and mvn -version."
-maven_version="$(printf '%s\n' "$maven_info" | sed -n 's/^Apache Maven \([0-9.]*\).*/\1/p')"
-[[ -n "$maven_version" ]] || fail "Cannot read Maven version."
-[[ "$(printf '%s\n' 3.6.3 "$maven_version" | sort -V | head -n 1)" == 3.6.3 ]] ||
-  fail "Maven 3.6.3 or newer is required."
-echo "Prerequisites OK: JDK 21 and Maven $maven_version."
-[[ "$mode" == --check ]] && exit 0
-
-echo "Downloading dependencies and building the application..."
-mvn -B -ntp -DskipTests clean package
-# This Hello World checkpoint needs no database, schema, or seed data.
+case "$mode" in run|--check|--build-only) ;; *) fail "Usage: ./start.sh [--check|--build-only]" ;; esac
+check_build_tools
+if [[ "$mode" != --build-only ]]; then find_postgres; fi
+[[ "$mode" == --check ]] && { echo "Prerequisites OK."; exit 0; }
+build_app
 [[ "$mode" == --build-only ]] && exit 0
-echo "Starting Trench Crusade Roster Builder."
-echo "Open http://localhost:8080 after Spring reports that it has started."
-echo "Press Ctrl+C to stop."
-exec java -jar target/trench-roster.jar
+source "$CP_ROOT/scripts/local-db.sh"
+app_pid=""
+cleanup() {
+  if [[ -n "$app_pid" ]] && kill -0 "$app_pid" 2>/dev/null; then
+    kill "$app_pid" 2>/dev/null || true
+    wait "$app_pid" 2>/dev/null || true
+  fi
+  stop_local_database
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+prepare_local_database app "${CP1_DB_PORT:-55432}"
+echo "Starting app; Flyway creates tables and catalogue data automatically."
+echo "Open http://localhost:8080 after Spring reports Started. Ctrl+C stops this app and its local database."
+if [[ "${SERVER_ADDRESS:-127.0.0.1}" == 0.0.0.0 ]]; then
+  echo "WSL direct address: http://$(hostname -I | awk '{print $1}'):8080/"
+fi
+java -Xms64m -Xmx256m -jar target/trench-roster.jar 9>&- &
+app_pid=$!
+wait "$app_pid"
