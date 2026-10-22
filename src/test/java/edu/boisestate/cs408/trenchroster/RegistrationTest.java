@@ -1,10 +1,6 @@
 package edu.boisestate.cs408.trenchroster;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -37,14 +33,9 @@ class RegistrationTest {
         return Map.of("username", prefix + suffix, "email", prefix + suffix + "@example.invalid",
                 "password", PASSWORD, "confirmPassword", PASSWORD);
     }
-    private HttpRequest request(String body) {
-        return HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/api/auth/register"))
-                .timeout(Duration.ofSeconds(20)).header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body)).build();
-    }
     private HttpResponse<String> post(Object body) throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            return client.send(request(json.writeValueAsString(body)), HttpResponse.BodyHandlers.ofString());
+        try (var client = new AuthTestClient(port)) {
+            return client.postJson("/api/auth/register", body);
         }
     }
     private String hash(String suffix) {
@@ -142,8 +133,8 @@ class RegistrationTest {
     }
 
     @Test void rejectsMalformedJsonWithoutLeakingInput() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var response = client.send(request("{\"password\":\"secret-never-echo\","), HttpResponse.BodyHandlers.ofString());
+        try (var client = new AuthTestClient(port)) {
+            var response = client.postJsonRaw("/api/auth/register", "{\"password\":\"secret-never-echo\",");
             assertEquals(400, response.statusCode());
             assertFalse(response.body().contains("secret-never-echo"));
             assertFalse(response.body().contains("Exception"));
@@ -152,10 +143,11 @@ class RegistrationTest {
     }
 
     @Test void simultaneousDuplicatesCreateExactlyOneAccount() throws Exception {
-        try (var client = HttpClient.newHttpClient()) {
-            var request = request(json.writeValueAsString(valid("a")));
-            var first = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-            var second = client.sendAsync(request, HttpResponse.BodyHandlers.ofString());
+        try (var client = new AuthTestClient(port)) {
+            var request = client.postRequest("/api/auth/register", json.writeValueAsString(valid("a")),
+                    "application/json", client.csrf());
+            var first = client.sendAsync(request);
+            var second = client.sendAsync(request);
             var statuses = Stream.of(first.join().statusCode(), second.join().statusCode()).sorted().toList();
             assertEquals(java.util.List.of(201, 409), statuses);
         }
