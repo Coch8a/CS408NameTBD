@@ -65,3 +65,23 @@ tbody tr:last-child th, tbody tr:last-child td { border-bottom: 0; }
 .project-status li { margin: 3px 0; }
 .message, .empty-message { padding: 16px 10px; color: var(--muted); }
 .error-message { border: 1px solid #ac866a; background: #393026; padding: 12px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-body { padding: 12px; }
+.account-modes { display: flex; gap: 8px; margin-bottom: 14px; }
+.account-modes button[aria-pressed=true] { border-color: #c5d8b6; background: var(--green-hover); }
+.account-panel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.account-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; max-width: 760px; }
+.account-field { display: flex; flex-direction: column; gap: 5px; }
+.account-field label { font-size: 12px; }
+.account-field input { min-height: 34px; width: 100%; padding: 6px 9px; border: 1px solid #697263; border-radius: 0; background: #303431; color: var(--text); }
+.account-field input[aria-invalid=true] { border-color: #d5a387; }
+.account-hint { font-size: 12px; color: var(--muted); }
+.field-error, .account-error { color: #f0b99b; font-size: 13px; }
+.account-error, .account-notice { margin-bottom: 12px; }
+.account-notice { color: #dce9cd; }
+.account-submit { margin-top: 14px; }
+.account-summary { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.account-summary dl { display: flex; gap: 36px; flex-wrap: wrap; margin: 0; }
+.account-summary dt { font-size: 12px; color: var(--muted); font-weight: 400; }
+.account-summary dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+button:disabled, fieldset:disabled input { opacity: .65; cursor: default; }
+button:disabled:hover { background: var(--green); }

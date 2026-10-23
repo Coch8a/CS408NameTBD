@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { loadProject } from './api.js';
+import AccountPanel from './AccountPanel.jsx';
 
 /** Compact, read-only catalogue. Search and category filters run locally. */
 export default function App() {
@@ -34,7 +35,7 @@ export default function App() {
   return <>
     <header className="app-header">
       <span className="app-title">Trench Crusade Roster Builder</span>
-      <nav aria-label="Main navigation"><a href="#units">Units</a><a href="#equipment">Weapons &amp; equipment</a><a href="#project-status">Project status</a></nav>
+      <nav aria-label="Main navigation"><a href="#account">Account</a><a href="#units">Units</a><a href="#equipment">Weapons &amp; equipment</a><a href="#project-status">Project status</a></nav>
     </header>
     <div className="workspace">
       <aside className="sidebar" aria-label="Faction">
@@ -49,6 +50,7 @@ export default function App() {
         </div>
       </aside>
       <main id="catalog">
+        <AccountPanel />
         <div className="catalog-heading"><h1>New Antioch</h1><span>Catalogue</span></div>
         <p className="catalog-intro">Recruitment costs and selected armoury items. All prices are in ducats.</p>
         <div className="toolbar" role="search" aria-label="Catalogue filters">
@@ -82,7 +84,7 @@ export default function App() {
           <h2 id="status-heading">Project status</h2>
           <ul>
             <li aria-live="polite">{project ? 'Catalogue available; database connected.' : error ? 'Catalogue unavailable; connection check failed.' : 'Checking catalogue and database connection…'}</li>
-            <li>Registration and login: planned.</li>
+            <li>Registration, login and logout: available.</li>
             <li>Roster creation, editing and saving: planned.</li>
           </ul>
         </section>

@@ -16,7 +16,7 @@ const catalog = { rulesVersion: '1.0.2', sourceUrl: 'https://www.trenchcrusade.c
     { id: 6, name: 'Combat Helmet', cost: 5, type: 'Equipment', notes: 'Headgear.' }
   ] };
 function healthyFetch(data = catalog) {
-  return vi.fn(async path => ({ ok: true, json: async () => path === '/api/health'
+  return vi.fn(async path => path === '/api/auth/me' ? { ok: false, status: 401 } : ({ ok: true, json: async () => path === '/api/health'
     ? { status: 'UP', database: 'UP' } : data }));
 }
 afterEach(() => vi.unstubAllGlobals());
@@ -63,7 +63,7 @@ describe('New Antioch catalogue', () => {
     expect(rows[3].textContent).toContain('Pistol');
   });
   it('reports connection failure and supports retry', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false })));
+    vi.stubGlobal('fetch', vi.fn(async path => ({ ok: false, status: path === '/api/auth/me' ? 401 : 503 })));
     render(<App />);
     expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.queryByText('Catalogue available; database connected.')).toBeNull();
