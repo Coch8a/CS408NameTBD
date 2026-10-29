@@ -4,7 +4,7 @@ import { getCurrentUser, loginAccount, logoutAccount, registerAccount } from './
 const emptyFields = { username: '', email: '', password: '', confirmPassword: '' };
 
 /** Plain account forms. Credentials stay in memory; the browser owns the session cookie. */
-export default function AccountPanel() {
+export default function AccountPanel({ onUserChange, sessionRevision = 0 }) {
   const [user, setUser] = useState(null);
   const userRef = useRef(null);
   const [checking, setChecking] = useState(true);
@@ -24,6 +24,7 @@ export default function AccountPanel() {
   function rememberUser(account) {
     userRef.current = account;
     setUser(account);
+    onUserChange?.(account);
   }
 
   useEffect(() => {
@@ -50,7 +51,7 @@ export default function AccountPanel() {
       profileRequest.current?.abort();
       window.removeEventListener('focus', refresh);
     };
-  }, [attempt]);
+  }, [attempt, sessionRevision]);
 
   useEffect(() => () => actionRequest.current?.abort(), []);
 

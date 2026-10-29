@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from './App.jsx';
 
 const catalog = { rulesVersion: '1.0.2', sourceUrl: 'https://www.trenchcrusade.com/rules/',
@@ -33,7 +33,7 @@ describe('New Antioch catalogue', () => {
     expect(within(units).getByRole('row', { name: /Lieutenant/ }).textContent).toContain('70');
     expect(within(units).getByRole('row', { name: /Yeoman/ }).textContent).toContain('30');
     expect(within(units).getByRole('row', { name: /Mechanized Heavy Infantry/ }).textContent).toContain('85 / 95');
-    expect(container.querySelector('#project-status ul').children.length).toBe(3);
+    expect(container.querySelector('#project-status ul').textContent).toContain('Roster creation, settings, saving and deletion: available.');
     expect(container.querySelector('img, svg, canvas')).toBeNull();
     expect(container.textContent).not.toMatch(/checkpoint|sprint|student|educational|sample|CS408/i);
   });
@@ -76,4 +76,32 @@ describe('New Antioch catalogue', () => {
     expect(screen.getByText('No units match your search.')).toBeTruthy();
     expect(screen.getByText('No equipment matches your filters.')).toBeTruthy();
   });
+  it('loads the signed-in account dashboard and clears private rosters after logout', async () => {
+    const user = { id: 1, username: 'tester', email: 'tester@example.invalid' };
+    let signedIn = true;
+    const roster = { id: 12, rosterName: 'Private company', factionId: 2, factionName: 'New Antioch',
+      ducatLimit: 700, unitCount: 0, createdAt: '2026-10-01T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z' };
+    vi.stubGlobal('fetch', vi.fn(async path => {
+      let status = 200;
+      let body;
+      if (path === '/api/auth/me') { status = signedIn ? 200 : 401; body = signedIn ? user : {}; }
+      else if (path === '/api/auth/csrf') body = { token: 'test', headerName: 'X-CSRF-TOKEN' };
+      else if (path === '/api/auth/logout') { signedIn = false; return new Response(null, { status: 204 }); }
+      else if (path === '/api/rosters') body = [roster];
+      else if (path === '/api/rosters/factions') body = catalog.factions;
+      else if (path === '/api/health') body = { status: 'UP', database: 'UP' };
+      else body = catalog;
+      return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    }));
+    render(<App />);
+    await screen.findByRole('button', { name: /Private company New Antioch/ });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await screen.findByText('Signed out.');
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Private company New Antioch/ })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'New roster' })).toBeNull();
+    });
+    expect(screen.getByText('Lieutenant')).toBeTruthy();
+  });
+
 });

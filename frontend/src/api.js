@@ -49,9 +49,13 @@ export function getCurrentUser(signal) {
   return authRequest('/api/auth/me', { signal }, true);
 }
 
+export function getCsrfToken(signal) {
+  return authRequest('/api/auth/csrf', { signal });
+}
+
 async function accountWrite(path, body, contentType, signal) {
   // Fetch for each action: login/logout invalidate the previous session's CSRF token.
-  const csrf = await authRequest('/api/auth/csrf', { signal });
+  const csrf = await getCsrfToken(signal);
   return authRequest(path, {
     method: 'POST', signal, body,
     headers: { 'Content-Type': contentType, [csrf.headerName]: csrf.token },

@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { loadProject } from './api.js';
 import AccountPanel from './AccountPanel.jsx';
+import RosterDashboard from './RosterDashboard.jsx';
 
-/** Compact, read-only catalogue. Search and category filters run locally. */
+/** Account workspace and public catalogue with local search and category filters. */
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [sessionRevision, setSessionRevision] = useState(0);
   const [project, setProject] = useState(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
@@ -35,7 +38,7 @@ export default function App() {
   return <>
     <header className="app-header">
       <span className="app-title">Trench Crusade Roster Builder</span>
-      <nav aria-label="Main navigation"><a href="#account">Account</a><a href="#units">Units</a><a href="#equipment">Weapons &amp; equipment</a><a href="#project-status">Project status</a></nav>
+      <nav aria-label="Main navigation"><a href="#account">Account</a><a href="#rosters">My rosters</a><a href="#units">Units</a><a href="#equipment">Weapons &amp; equipment</a><a href="#project-status">Project status</a></nav>
     </header>
     <div className="workspace">
       <aside className="sidebar" aria-label="Faction">
@@ -50,7 +53,14 @@ export default function App() {
         </div>
       </aside>
       <main id="catalog">
-        <AccountPanel />
+        <AccountPanel onUserChange={setUser} sessionRevision={sessionRevision} />
+        {user ? <RosterDashboard key={user.id} onSessionExpired={() => {
+          setUser(null);
+          setSessionRevision(value => value + 1);
+        }} /> : <section id="rosters" className="catalog-panel" aria-labelledby="signed-out-rosters-heading">
+          <div className="panel-heading"><h2 id="signed-out-rosters-heading">My rosters</h2></div>
+          <p className="empty-message"><a href="#account">Sign in</a> to create and manage your saved rosters.</p>
+        </section>}
         <div className="catalog-heading"><h1>New Antioch</h1><span>Catalogue</span></div>
         <p className="catalog-intro">Recruitment costs and selected armoury items. All prices are in ducats.</p>
         <div className="toolbar" role="search" aria-label="Catalogue filters">
@@ -85,7 +95,8 @@ export default function App() {
           <ul>
             <li aria-live="polite">{project ? 'Catalogue available; database connected.' : error ? 'Catalogue unavailable; connection check failed.' : 'Checking catalogue and database connection…'}</li>
             <li>Registration, login and logout: available.</li>
-            <li>Roster creation, editing and saving: planned.</li>
+            <li>Roster creation, settings, saving and deletion: available.</li>
+            <li>Adding units, equipment and calculating totals: planned.</li>
           </ul>
         </section>
       </main>
