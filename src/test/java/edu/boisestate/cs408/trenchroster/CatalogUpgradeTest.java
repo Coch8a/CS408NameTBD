@@ -19,7 +19,7 @@ class CatalogUpgradeTest {
             jdbc.update("INSERT INTO roster_units(roster_id,unit_id,quantity) SELECT r.id,u.id,1 FROM rosters r CROSS JOIN units u WHERE r.roster_name='Existing roster' AND u.name='Sample Infantry'");
             jdbc.update("INSERT INTO roster_equipment(roster_unit_id,equipment_id,quantity) SELECT r.id,e.id,1 FROM roster_units r CROSS JOIN equipment e WHERE e.name='Training Rifle'");
             var flyway = Flyway.configure().dataSource(dataSource).load();
-            assertEquals(2, flyway.migrate().migrationsExecuted);
+            assertEquals(3, flyway.migrate().migrationsExecuted);
             assertEquals("migration-test", jdbc.queryForObject("SELECT username_normalized FROM users", String.class));
             assertEquals("migration@example.invalid", jdbc.queryForObject("SELECT email_normalized FROM users", String.class));
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM roster_equipment", Integer.class));

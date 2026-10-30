@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import RosterUnits from './RosterUnits.jsx';
 import { createRoster, deleteRoster, getRoster, listRosterFactions, listRosters, updateRoster } from './rosterApi.js';
 
 const emptyFields = { rosterName: '', factionId: '', ducatLimit: '700' };
@@ -18,13 +19,15 @@ export default function RosterDashboard({ onSessionExpired }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [unitsBusy, setUnitsBusy] = useState(false);
+  const working = busy || unitsBusy;
   const busyRef = useRef(false);
   const requestRef = useRef(null);
   const formRef = useRef(null);
   const headingRef = useRef(null);
 
   async function perform(action, missingId = selected?.id) {
-    if (busyRef.current) return;
+    if (busyRef.current || unitsBusy) return;
     const controller = new AbortController();
     requestRef.current = controller;
     busyRef.current = true;
@@ -83,7 +86,7 @@ export default function RosterDashboard({ onSessionExpired }) {
   }
 
   function begin(next) {
-    if (busyRef.current) return;
+    if (busyRef.current || unitsBusy) return;
     setMode(next);
     setError('');
     setNotice('');
@@ -106,7 +109,7 @@ export default function RosterDashboard({ onSessionExpired }) {
 
   function submit(event) {
     event.preventDefault();
-    if (busyRef.current) return;
+    if (busyRef.current || unitsBusy) return;
     const errors = {};
     const name = fields.rosterName.trim();
     if (!name) errors.rosterName = 'Enter a roster name.';
@@ -148,31 +151,31 @@ export default function RosterDashboard({ onSessionExpired }) {
     'aria-describedby': fieldErrors[name] ? `roster-error-${name}` : undefined });
 
   return <section id="rosters" className="catalog-panel roster-dashboard" aria-labelledby="rosters-heading">
-    <div className="panel-heading"><h2 id="rosters-heading">My rosters</h2><span>Private to your account</span></div>
+    <div className="panel-heading"><h2 id="rosters-heading">My rosters</h2></div>
     <div className="roster-toolbar">
       <label>Search saved rosters<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Roster name or faction" /></label>
-      <button type="button" disabled={busy || !loaded || !factions.length || mode !== 'view'} onClick={() => begin('create')}>New roster</button>
-      <button type="button" disabled={busy || mode !== 'view'} onClick={load}>Refresh rosters</button>
+      <button type="button" disabled={working || !loaded || !factions.length || mode !== 'view'} onClick={() => begin('create')}>New roster</button>
+      <button type="button" disabled={working || mode !== 'view'} onClick={load}>Refresh rosters</button>
     </div>
     {busy && <p className="roster-feedback" role="status">{editing ? 'Saving roster…' : mode === 'delete' ? 'Deleting roster…' : 'Loading rosters…'}</p>}
     {notice && <p className="roster-feedback account-notice" role="status">{notice}</p>}
     {error && <p className="roster-feedback account-error" role="alert">{error}</p>}
     <div className="roster-workspace">
       <aside className="roster-list" aria-label="Saved rosters">
-        {loaded && !rosters.length && <p className="empty-message">No saved rosters. Choose New roster to get started.</p>}
+        {loaded && !rosters.length && <p className="empty-message">No saved rosters.</p>}
         {loaded && rosters.length > 0 && !visible.length && <p className="empty-message">No rosters match your search.</p>}
         <ul>{visible.map(roster => <li key={roster.id}>
           <button type="button" className="roster-row" aria-pressed={selected?.id === roster.id}
-            disabled={busy || mode !== 'view'} onClick={() => open(roster.id)}>
+            disabled={working || mode !== 'view'} onClick={() => open(roster.id)}>
             <strong>{roster.rosterName}</strong><span>{roster.factionName}</span>
-            <span>{roster.ducatLimit.toLocaleString()} ducat limit · {roster.unitCount} units</span>
+            <span>{roster.ducatLimit.toLocaleString()} ducat limit · {roster.unitCount} {roster.unitCount === 1 ? 'unit' : 'units'}</span>
           </button>
         </li>)}</ul>
       </aside>
       <div className="roster-detail">
         {editing ? <form ref={formRef} aria-label={mode === 'create' ? 'Create roster' : 'Edit roster settings'} onSubmit={submit} noValidate>
           <h3>{mode === 'create' ? 'New roster' : 'Roster settings'}</h3>
-          <fieldset disabled={busy}>
+          <fieldset disabled={working}>
             <legend className="visually-hidden">Roster settings</legend>
             <div className="account-field"><label htmlFor="roster-name">Roster name</label>
               <input id="roster-name" name="rosterName" value={fields.rosterName} onChange={change} maxLength={120} required {...accessibility('rosterName')} />{fieldError('rosterName')}</div>
@@ -197,12 +200,17 @@ export default function RosterDashboard({ onSessionExpired }) {
           </dl>
           {mode === 'delete' ? <div className="delete-confirmation" role="group" aria-label="Confirm roster deletion">
             <p>Delete “{selected.rosterName}”? This permanently removes the roster and its saved units and equipment.</p>
-            <div className="roster-actions"><button type="button" className="danger-button" disabled={busy} onClick={remove}>Confirm delete</button>
-              <button type="button" disabled={busy} autoFocus onClick={() => { setMode('view'); setError(''); }}>Keep roster</button></div>
-          </div> : <div className="roster-actions"><button type="button" disabled={busy} onClick={() => begin('edit')}>Edit settings</button>
-            <button type="button" className="danger-button" disabled={busy} onClick={() => { setMode('delete'); setError(''); setNotice(''); }}>Delete roster</button></div>}
-          <p className="roster-note">Roster settings are saved to your account. Adding units and equipment is not available yet.</p>
-        </> : <p className="empty-message">Select a saved roster to view its settings, or create a new one.</p>}
+            <div className="roster-actions"><button type="button" className="danger-button" disabled={working} onClick={remove}>Confirm delete</button>
+              <button type="button" disabled={working} autoFocus onClick={() => { setMode('view'); setError(''); }}>Keep roster</button></div>
+          </div> : <div className="roster-actions"><button type="button" disabled={working} onClick={() => begin('edit')}>Edit settings</button>
+            <button type="button" className="danger-button" disabled={working} onClick={() => { setMode('delete'); setError(''); setNotice(''); }}>Delete roster</button></div>}
+          {mode === 'view' && <RosterUnits key={`${selected.id}:${selected.factionId}`} rosterId={selected.id}
+            onBusyChange={setUnitsBusy} onSessionExpired={onSessionExpired}
+            onRosterUpdated={roster => {
+              setSelected(current => current?.id === roster.id ? roster : current);
+              setRosters(current => ordered(current.map(row => row.id === roster.id ? roster : row)));
+            }} />}
+        </> : <p className="empty-message">Select or create a roster.</p>}
       </div>
     </div>
   </section>;

@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Safe API errors never disclose another account's roster or database details. */
-@RestControllerAdvice(assignableTypes = RosterController.class)
+@RestControllerAdvice(assignableTypes = {RosterController.class, RosterUnitController.class})
 public class RosterErrors {
     public record ErrorResponse(String message, Map<String, String> errors) {}
     @ExceptionHandler(RosterService.MissingRoster.class)
     ResponseEntity<ErrorResponse> missing() { return error(404, "Roster not found.", Map.of()); }
+    @ExceptionHandler(RosterUnitService.MissingRosterUnit.class)
+    ResponseEntity<ErrorResponse> missingUnit() { return error(404, "Roster unit not found. Refresh the unit list.", Map.of()); }
     @ExceptionHandler(UsernameNotFoundException.class)
     ResponseEntity<ErrorResponse> signedOut() { return error(401, "Sign in to continue.", Map.of()); }
     @ExceptionHandler(RosterService.InvalidRoster.class)

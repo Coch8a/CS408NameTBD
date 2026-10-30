@@ -35,3 +35,7 @@ export const getRoster = (id, signal) => request(`/api/rosters/${id}`, 'GET', un
 export const createRoster = (fields, signal) => request('/api/rosters', 'POST', fields, signal);
 export const updateRoster = (id, fields, signal) => request(`/api/rosters/${id}`, 'PUT', fields, signal);
 export const deleteRoster = (id, signal) => request(`/api/rosters/${id}`, 'DELETE', undefined, signal);
+
+export const getRosterUnits = (id, signal) => request(`/api/rosters/${id}/units`, 'GET', undefined, signal);
+export const addRosterUnit = (id, unitId, signal) => request(`/api/rosters/${id}/units`, 'POST', { unitId }, signal);
+export const removeRosterUnit = (id, entryId, signal) => request(`/api/rosters/${id}/units/${entryId}`, 'DELETE', undefined, signal);

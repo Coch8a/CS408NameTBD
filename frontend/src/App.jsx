@@ -44,7 +44,6 @@ export default function App() {
       <aside className="sidebar" aria-label="Faction">
         <h2>Factions</h2>
         <a className="selected-faction" href="#catalog" aria-current="page">New Antioch</a>
-        <p className="sidebar-note">More factions planned.</p>
         <div className="rules-reference">
           <h2>Rules reference</h2>
           <p>Warbands of Trench Crusade</p>
@@ -96,7 +95,7 @@ export default function App() {
             <li aria-live="polite">{project ? 'Catalogue available; database connected.' : error ? 'Catalogue unavailable; connection check failed.' : 'Checking catalogue and database connection…'}</li>
             <li>Registration, login and logout: available.</li>
             <li>Roster creation, settings, saving and deletion: available.</li>
-            <li>Adding units, equipment and calculating totals: planned.</li>
+            <li>Individual roster units: available. Equipment, totals and list restrictions: planned.</li>
           </ul>
         </section>
       </main>

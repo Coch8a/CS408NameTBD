@@ -16,7 +16,7 @@ public class RosterService {
     private static final String SELECT = """
             SELECT r.id, r.roster_name, r.faction_id, f.name AS faction_name,
                    r.ducat_limit, r.created_at, r.updated_at,
-                   COALESCE((SELECT SUM(ru.quantity) FROM roster_units ru WHERE ru.roster_id=r.id), 0) AS unit_count
+                   (SELECT COUNT(*) FROM roster_units ru WHERE ru.roster_id=r.id) AS unit_count
             FROM rosters r JOIN factions f ON f.id=r.faction_id
             """;
     private static final RowMapper<Roster> MAPPER = (row, index) -> new Roster(
@@ -62,11 +62,8 @@ public class RosterService {
 
     @Transactional
     public Roster update(long ownerId, long id, RosterRequest request) {
-        // Lock before inspecting unit references so a later unit-edit API can use the same lock.
-        var factions = jdbc.query("SELECT faction_id FROM rosters WHERE user_id=? AND id=? FOR UPDATE",
-                (row, index) -> row.getLong("faction_id"), ownerId, id);
-        if (factions.isEmpty()) throw new MissingRoster();
-        if (factions.getFirst().longValue() != request.factionId().longValue()) {
+        long factionId = lock(ownerId, id);
+        if (factionId != request.factionId().longValue()) {
             if (jdbc.queryForObject("SELECT COUNT(*) FROM roster_units WHERE roster_id=?", Long.class, id) > 0) {
                 throw new InvalidRoster("Remove the roster's units before changing its faction.",
                         Map.of("factionId", "The faction cannot change while this roster contains units."));
@@ -86,6 +83,13 @@ public class RosterService {
         if (jdbc.update("DELETE FROM rosters WHERE user_id=? AND id=?", ownerId, id) == 0) {
             throw new MissingRoster();
         }
+    }
+
+    long lock(long ownerId, long id) {
+        var rows = jdbc.query("SELECT faction_id FROM rosters WHERE user_id=? AND id=? FOR UPDATE",
+                (row, index) -> row.getLong("faction_id"), ownerId, id);
+        if (rows.isEmpty()) throw new MissingRoster();
+        return rows.getFirst();
     }
 
     private void checkFaction(long factionId) {

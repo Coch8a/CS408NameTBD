@@ -109,3 +109,18 @@ button:disabled:hover { background: var(--green); }
 .delete-confirmation { border: 1px solid #ac866a; background: #393026; padding: 12px; margin-top: 18px; }
 .danger-button { background: #49372f; border-color: #ac866a; }
 .danger-button:hover { background: #61483a; }
+.roster-units { margin-top: 22px; border-top: 1px solid var(--border); padding-top: 14px; }
+.unit-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.unit-section-heading h4 { font-size: 16px; margin: 0; }
+.unit-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.unit-columns h5 { font-size: 13px; margin: 0 0 10px; font-weight: 700; }
+.unit-search { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; font-size: 12px; }
+.unit-list { list-style: none; padding: 0; margin: 0; }
+.unit-list li { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid var(--border); padding: 10px 0; }
+.unit-list li > div { min-width: 0; }
+.unit-list strong, .unit-list span, .unit-list small { display: block; overflow-wrap: anywhere; }
+.unit-list strong { font-size: 13px; }
+.unit-list span, .unit-list small { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.unit-list button { font-size: 12px; padding: 4px 8px; }
+.unit-feedback { margin: 8px 0; }
+.unit-empty { color: var(--muted); font-size: 13px; }
