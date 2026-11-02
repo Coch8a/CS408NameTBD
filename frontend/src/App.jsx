@@ -28,7 +28,7 @@ export default function App() {
 
   const catalog = project?.catalog;
   const needle = query.trim().toLowerCase();
-  const matches = item => `${item.name} ${item.type} ${item.notes}`.toLowerCase().includes(needle);
+  const matches = item => `${item.name} ${item.type}`.toLowerCase().includes(needle);
   const sorted = items => alphabetical ? [...items].sort((a, b) => a.name.localeCompare(b.name)) : items;
   const units = sorted((catalog?.units ?? []).filter(matches));
   const equipment = sorted((catalog?.equipment ?? []).filter(item => matches(item) &&
@@ -61,7 +61,6 @@ export default function App() {
           <p className="empty-message"><a href="#account">Sign in</a> to create and manage your saved rosters.</p>
         </section>}
         <div className="catalog-heading"><h1>New Antioch</h1><span>Catalogue</span></div>
-        <p className="catalog-intro">Recruitment costs and selected armoury items. All prices are in ducats.</p>
         <div className="toolbar" role="search" aria-label="Catalogue filters">
           <label className="search-field">Search catalogue<input type="search" value={query} placeholder="Search units, weapons or equipment" onChange={event => setQuery(event.target.value)}/></label>
           <label>Equipment category<select value={category} onChange={event => setCategory(event.target.value)}><option>All categories</option>{categories.map(type => <option key={type}>{type}</option>)}</select></label>
@@ -74,20 +73,19 @@ export default function App() {
           <section className="catalog-panel" id="units" aria-labelledby="units-heading">
             <div className="panel-heading"><h2 id="units-heading">Units</h2><span>{units.length} of {catalog.units.length}</span></div>
             <table><caption className="visually-hidden">New Antioch unit recruitment costs</caption>
-              <thead><tr><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Limit</th><th scope="col" className="numeric">Ducats</th><th scope="col">Loadout / cost notes</th></tr></thead>
-              <tbody>{units.map(unit => <tr key={unit.id}><th scope="row">{unit.name}</th><td>{unit.type}</td><td>{unit.limit || 'Unlimited'}</td><td className="numeric cost">{unit.cost}{unit.alternateCost > 0 ? ` / ${unit.alternateCost}` : ''}</td><td className="notes">{unit.notes}</td></tr>)}</tbody>
+              <thead><tr><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Limit</th><th scope="col" className="numeric">Ducats</th></tr></thead>
+              <tbody>{units.map(unit => <tr key={unit.id}><th scope="row">{unit.name}</th><td>{unit.type}</td><td>{unit.limit || 'Unlimited'}</td><td className="numeric cost">{unit.cost}{unit.alternateCost > 0 ? ` / ${unit.alternateCost}` : ''}</td></tr>)}</tbody>
             </table>
             {units.length === 0 && <p className="empty-message">No units match your search.</p>}
           </section>
           <section className="catalog-panel" id="equipment" aria-labelledby="equipment-heading">
             <div className="panel-heading"><h2 id="equipment-heading">Weapons &amp; equipment</h2><span>{equipment.length} of {catalog.equipment.length}</span></div>
             <table><caption className="visually-hidden">Selected New Antioch armoury prices</caption>
-              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Ducats</th><th scope="col">Restrictions / cost notes</th></tr></thead>
-              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost}</td><td className="notes">{item.notes || '—'}</td></tr>)}</tbody>
+              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Ducats</th></tr></thead>
+              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost}</td></tr>)}</tbody>
             </table>
             {equipment.length === 0 && <p className="empty-message">No equipment matches your filters.</p>}
           </section>
-          <p className="catalog-footnote">Selected entries, not the full faction roster. Unit costs exclude additional gear unless stated. See the published rules for complete restrictions.</p>
         </>}
         <section className="project-status" id="project-status" aria-labelledby="status-heading">
           <h2 id="status-heading">Project status</h2>
@@ -95,7 +93,7 @@ export default function App() {
             <li aria-live="polite">{project ? 'Catalogue available; database connected.' : error ? 'Catalogue unavailable; connection check failed.' : 'Checking catalogue and database connection…'}</li>
             <li>Registration, login and logout: available.</li>
             <li>Roster creation, settings, saving and deletion: available.</li>
-            <li>Individual roster units: available. Equipment, totals and list restrictions: planned.</li>
+            <li>Individual roster units: available.</li>
           </ul>
         </section>
       </main>
