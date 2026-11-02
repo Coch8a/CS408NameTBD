@@ -25,6 +25,18 @@ export default function RosterDashboard({ onSessionExpired }) {
   const requestRef = useRef(null);
   const formRef = useRef(null);
   const headingRef = useRef(null);
+  const rosterButtons = useRef(new Map());
+
+  function closeEditor() {
+    if (working || busyRef.current) return;
+    const previousId = selected?.id;
+    setSelected(null);
+    setMode('view');
+    setError('');
+    setNotice('');
+    setQuery('');
+    rosterButtons.current.get(previousId)?.focus();
+  }
 
   async function perform(action, missingId = selected?.id) {
     if (busyRef.current || unitsBusy) return;
@@ -160,12 +172,13 @@ export default function RosterDashboard({ onSessionExpired }) {
     {busy && <p className="roster-feedback" role="status">{editing ? 'Saving roster…' : mode === 'delete' ? 'Deleting roster…' : 'Loading rosters…'}</p>}
     {notice && <p className="roster-feedback account-notice" role="status">{notice}</p>}
     {error && <p className="roster-feedback account-error" role="alert">{error}</p>}
-    <div className="roster-workspace">
+    <div className={`roster-workspace${selected ? ' editor-open' : ''}`}>
       <aside className="roster-list" aria-label="Saved rosters">
         {loaded && !rosters.length && <p className="empty-message">No saved rosters.</p>}
         {loaded && rosters.length > 0 && !visible.length && <p className="empty-message">No rosters match your search.</p>}
         <ul>{visible.map(roster => <li key={roster.id}>
           <button type="button" className="roster-row" aria-pressed={selected?.id === roster.id}
+            ref={element => { if (element) rosterButtons.current.set(roster.id, element); else rosterButtons.current.delete(roster.id); }}
             disabled={working || mode !== 'view'} onClick={() => open(roster.id)}>
             <strong>{roster.rosterName}</strong><span>{roster.factionName}</span>
             <span>{roster.ducatLimit.toLocaleString()} ducat limit · {roster.unitCount} {roster.unitCount === 1 ? 'unit' : 'units'}</span>
@@ -191,7 +204,10 @@ export default function RosterDashboard({ onSessionExpired }) {
               <button type="button" onClick={() => { setMode('view'); setError(''); setFieldErrors({}); }}>Cancel</button></div>
           </fieldset>
         </form> : selected ? <>
-          <h3 ref={headingRef} tabIndex={-1}>{selected.rosterName}</h3>
+          <div className="roster-editor-header">
+            <h3 ref={headingRef} tabIndex={-1}>{selected.rosterName}</h3>
+            <button type="button" disabled={working || mode !== 'view'} onClick={closeEditor}>Back to rosters</button>
+          </div>
           <dl className="roster-metadata">
             <div><dt>Faction</dt><dd>{selected.factionName}</dd></div>
             <div><dt>Ducat limit</dt><dd>{selected.ducatLimit.toLocaleString()}</dd></div>
@@ -204,13 +220,14 @@ export default function RosterDashboard({ onSessionExpired }) {
               <button type="button" disabled={working} autoFocus onClick={() => { setMode('view'); setError(''); }}>Keep roster</button></div>
           </div> : <div className="roster-actions"><button type="button" disabled={working} onClick={() => begin('edit')}>Edit settings</button>
             <button type="button" className="danger-button" disabled={working} onClick={() => { setMode('delete'); setError(''); setNotice(''); }}>Delete roster</button></div>}
-          {mode === 'view' && <RosterUnits key={`${selected.id}:${selected.factionId}`} rosterId={selected.id}
+
+        </> : <p className="empty-message">Select or create a roster.</p>}
+        {selected && <div hidden={mode !== 'view'}><RosterUnits key={`${selected.id}:${selected.factionId}`} rosterId={selected.id}
             onBusyChange={setUnitsBusy} onSessionExpired={onSessionExpired}
             onRosterUpdated={roster => {
               setSelected(current => current?.id === roster.id ? roster : current);
               setRosters(current => ordered(current.map(row => row.id === roster.id ? roster : row)));
-            }} />}
-        </> : <p className="empty-message">Select or create a roster.</p>}
+            }} /></div>}
       </div>
     </div>
   </section>;

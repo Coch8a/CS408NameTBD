@@ -124,3 +124,28 @@ button:disabled:hover { background: var(--green); }
 .unit-list button { font-size: 12px; padding: 4px 8px; }
 .unit-feedback { margin: 8px 0; }
 .unit-empty { color: var(--muted); font-size: 13px; }
+.roster-workspace.editor-open { grid-template-columns: minmax(0, 1fr); }
+.editor-open > .roster-list { order: 2; border-right: 0; border-top: 1px solid var(--border); }
+.editor-open > .roster-list ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); max-height: 170px; overflow-y: auto; }
+.editor-open .roster-row { height: 100%; border-right: 1px solid var(--border); }
+.roster-editor-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.roster-editor-header h3 { margin: 0; }
+.editor-open .roster-metadata { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.editor-open .roster-actions { margin-top: 12px; }
+.roster-units .unit-columns { grid-template-columns: minmax(220px, 2fr) minmax(0, 3fr); gap: 0; min-height: 240px; border: 1px solid var(--border); }
+.saved-unit-panel, .unit-detail-panel { padding: 12px; min-width: 0; }
+.saved-unit-panel { border-right: 1px solid var(--border); background: #222623; }
+.saved-unit-list { max-height: 430px; overflow-y: auto; }
+.saved-unit-list li { align-items: center; padding: 6px 0; }
+.unit-list .unit-select { flex: 1; min-width: 0; text-align: left; white-space: normal; background: transparent; border: 1px solid transparent; }
+.unit-list .unit-select[aria-pressed=true] { background: var(--green); border-color: #a4ba8d; }
+.unit-list .unit-select:hover { background: var(--green-hover); }
+.unit-detail-panel h6 { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; margin: 16px 0; }
+.unit-detail-panel h6 span { color: var(--muted); font-size: 13px; }
+.unit-metadata { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.unit-metadata dt { font-size: 12px; color: var(--muted); font-weight: 400; }
+.unit-metadata dd { margin: 4px 0 0; }
+.unit-recruitment { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+.unit-recruitment h5 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
+.unit-recruitment .unit-search { max-width: 420px; }
+.recruitment-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 0 20px; max-height: 340px; overflow-y: auto; }
