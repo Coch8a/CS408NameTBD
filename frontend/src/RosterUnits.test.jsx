@@ -35,12 +35,12 @@ describe('Roster unit selection', () => {
   it('loads saved units and searches only the available catalogue', async () => {
     api.getRosterUnits.mockResolvedValue(result([first]));
     await ready();
-    expect(screen.getByText('1. Yeoman')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select Yeoman 1' })).toBeTruthy();
     expect(screen.getByText('Heavy infantry · 85 / 95 ducats')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Search available units'), { target: { value: 'heavy' } });
     expect(screen.queryByRole('button', { name: 'Add Yeoman' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Add Mechanized Heavy Infantry' })).toBeTruthy();
-    expect(screen.getByText('1. Yeoman')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select Yeoman 1' })).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Search available units'), { target: { value: 'missing' } });
     expect(screen.getByText('No units match your search.')).toBeTruthy();
   });
@@ -84,11 +84,11 @@ describe('Roster unit selection', () => {
     await ready();
     fireEvent.click(screen.getByRole('button', { name: 'Remove Yeoman 1' }));
     await screen.findByRole('alert');
-    expect(screen.getByText('1. Yeoman')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select Yeoman 1' })).toBeTruthy();
     expect(screen.queryByText('Yeoman removed.')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Remove Yeoman 1' }));
     await screen.findByText('Yeoman removed.');
-    expect(screen.queryByText('1. Yeoman')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Select Yeoman 1' })).toBeNull();
   });
 
   it('reports failed additions without inventing a saved unit', async () => {
@@ -105,7 +105,7 @@ describe('Roster unit selection', () => {
     render(<RosterUnits rosterId={12} onRosterUpdated={updated} onBusyChange={busy} onSessionExpired={expired} />);
     await screen.findByRole('alert');
     fireEvent.click(screen.getByRole('button', { name: 'Refresh units' }));
-    await screen.findByText('1. Yeoman');
+    await screen.findByRole('button', { name: 'Select Yeoman 1' });
     api.removeRosterUnit.mockRejectedValue(Object.assign(new Error('Roster unit not found. Refresh the unit list.'), { status: 404 }));
     fireEvent.click(screen.getByRole('button', { name: 'Remove Yeoman 1' }));
     await screen.findByRole('alert');
@@ -135,14 +135,14 @@ describe('Roster unit selection', () => {
     await screen.findByRole('button', { name: 'Add Yeoman' });
     fireEvent.click(screen.getByRole('button', { name: 'Add Yeoman' }));
     await waitFor(() => expect(screen.getByRole('button', { name: /Company New Antioch/ }).textContent).toContain('1 unit'));
-    expect(screen.getByText('1. Yeoman')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Select Yeoman 1' })).toBeTruthy();
     api.listRosters.mockResolvedValue([{ ...roster, unitCount: 1 }]);
     api.getRoster.mockResolvedValue({ ...roster, unitCount: 1 });
     api.getRosterUnits.mockResolvedValue(result([first]));
     fireEvent.click(screen.getByRole('button', { name: 'Refresh rosters' }));
-    await waitFor(() => expect(screen.queryByText('1. Yeoman')).toBeNull());
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Select Yeoman 1' })).toBeNull());
     fireEvent.click(screen.getByRole('button', { name: /Company New Antioch/ }));
-    await screen.findByText('1. Yeoman');
+    await screen.findByRole('button', { name: 'Select Yeoman 1' });
     expect(api.getRosterUnits).toHaveBeenCalledTimes(2);
   });
 
@@ -157,7 +157,7 @@ describe('Roster unit selection', () => {
     expect(screen.getByRole('button', { name: 'Delete roster' }).disabled).toBe(true);
     expect(screen.getByRole('button', { name: 'Refresh rosters' }).disabled).toBe(true);
     finish(result([first]));
-    await screen.findByText('1. Yeoman');
+    await screen.findByRole('button', { name: 'Select Yeoman 1' });
     expect(screen.getByRole('button', { name: 'Edit settings' }).disabled).toBe(false);
   });
 });

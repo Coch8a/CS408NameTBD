@@ -29,6 +29,14 @@ The catalogue includes selected New Antioch units and equipment with search, equ
 - Tests for access permissions, duplicate units, failed requests, migration safety, and roster persistence after restart.
 
 
+### Checkpoint 4 — Roster builder and equipment
+
+- Main roster editor with individual unit selection and equipment controls.
+- Saved loadouts with armour selection, quantity controls, and compatibility checks.
+- Server-calculated unit and roster costs, remaining ducats, and over-budget warnings.
+- Recruitment discounts and included armour pricing without duplicate charges.
+- Tests for cost calculations, equipment restrictions, ownership, concurrent changes, failed saves, and persistence after restart.
+
 ## Prerequisites
 
 Use Ubuntu 24.04 or Ubuntu through WSL. Run scripts in Bash as a normal Linux user. Required tools are JDK 21, Maven 3.6.3+, Node.js 24, and PostgreSQL 16+. Internet access is required to download dependencies.
@@ -95,6 +103,9 @@ Refreshing the page restores an active session. Sessions expire after 30 minutes
 | `GET /api/rosters/{id}/units` | Roster details, saved unit entries, and available units. |
 | `POST /api/rosters/{id}/units` | Add one unit with JSON field `unitId`. |
 | `DELETE /api/rosters/{id}/units/{entryId}` | Remove one saved entry using its entry ID. |
+| `GET /api/rosters/{id}/units/{entryId}/equipment` | Saved equipment, compatible choices, and current costs. |
+| `PUT /api/rosters/{id}/units/{entryId}/equipment/{equipmentId}` | Set the quantity using JSON field `quantity`; zero removes the item. |
+| `DELETE /api/rosters/{id}/units/{entryId}/equipment/{equipmentId}` | Remove an equipment item when the remaining loadout is valid. |
 
 Roster endpoints require login. API clients must retain cookies and send a CSRF token in `X-CSRF-TOKEN` for POST, PUT, and DELETE requests, including registration, login, and logout. Fetch a fresh token after login or logout. The interface handles this automatically. Missing rosters and rosters owned by another account return 404.
 
@@ -118,7 +129,7 @@ curl -f http://127.0.0.1:8080/api/health
 
 ## Catalogue and database
 
-The catalogue contains three unit entries and fourteen armoury entries based on [Warbands of Trench Crusade 1.0.2](https://www.trenchcrusade.com/app/uploads/2026/09/Warbands-of-Trench-Crusade.pdf). It covers selected entries, not the full faction. Prices and armour options are catalogue references; equipment selection and roster totals are not implemented.
+The catalogue contains three unit entries and fifteen armoury entries based on [Warbands of Trench Crusade 1.0.2](https://www.trenchcrusade.com/app/uploads/2026/09/Warbands-of-Trench-Crusade.pdf). It covers selected entries, not the full faction. Equipment selection and roster totals use these catalogue prices, unit discounts, and included armour options.
 
 Flyway applies migrations at startup:
 
@@ -127,6 +138,7 @@ Flyway applies migrations at startup:
 - V3 adds the New Antioch catalogue.
 - V4 adds normalized account identities.
 - V5 splits grouped roster units into individual entries and preserves existing equipment assignments.
+- V6 adds equipment compatibility rules, recruitment prices, and default Heavy Infantry armour.
 
 SQL migrations are in `src/main/resources/db/migration/`. V5 is a Java migration in `src/main/java/db/migration/`. Add a new version for database changes; do not edit applied migrations. Older sample catalogue rows remain for existing references but are excluded from the public catalogue.
 

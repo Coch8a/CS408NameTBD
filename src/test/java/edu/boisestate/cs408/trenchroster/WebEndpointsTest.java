@@ -56,7 +56,7 @@ class WebEndpointsTest {
         assertEquals(95, jdbc.queryForObject("SELECT alternate_cost FROM units WHERE name='Mechanized Heavy Infantry'", Integer.class));
         assertEquals(30, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Submachine Gun'", Integer.class));
         assertEquals(50, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Machine Armour'", Integer.class));
-        assertEquals(14, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
+        assertEquals(15, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
     }
     @Test void schemaReportsEveryProposalTableWithoutUserData() throws Exception {
         var response = get("/api/checkpoint");
