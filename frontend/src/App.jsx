@@ -93,7 +93,7 @@ export default function App() {
             <li aria-live="polite">{project ? 'Catalogue available; database connected.' : error ? 'Catalogue unavailable; connection check failed.' : 'Checking catalogue and database connection…'}</li>
             <li>Registration, login and logout: available.</li>
             <li>Roster creation, settings, saving and deletion: available.</li>
-            <li>Individual roster units: available.</li>
+            <li>Roster units, equipment and cost totals: available.</li>
           </ul>
         </section>
       </main>

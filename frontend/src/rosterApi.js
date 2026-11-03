@@ -1,7 +1,7 @@
 import { getCsrfToken } from './api.js';
 
 /** Roster requests use the same session cookie and fresh CSRF tokens as account actions. */
-async function request(path, method, fields, signal) {
+export async function request(path, method, fields, signal) {
   const headers = { Accept: 'application/json' };
   if (method !== 'GET') {
     const csrf = await getCsrfToken(signal);

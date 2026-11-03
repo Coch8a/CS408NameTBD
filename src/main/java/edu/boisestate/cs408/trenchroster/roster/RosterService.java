@@ -15,15 +15,20 @@ public class RosterService {
     private final JdbcTemplate jdbc;
     private static final String SELECT = """
             SELECT r.id, r.roster_name, r.faction_id, f.name AS faction_name,
-                   r.ducat_limit, r.created_at, r.updated_at,
+                   r.ducat_limit, r.created_at, r.updated_at, COALESCE(costs.total_cost,0) AS total_cost,
                    (SELECT COUNT(*) FROM roster_units ru WHERE ru.roster_id=r.id) AS unit_count
             FROM rosters r JOIN factions f ON f.id=r.faction_id
+            LEFT JOIN (SELECT roster_id,SUM(recruitment_cost+equipment_cost) AS total_cost FROM (
+            """ + RosterCostService.UNIT_COSTS + """
+            ) unit_costs GROUP BY roster_id) costs ON costs.roster_id=r.id
             """;
     private static final RowMapper<Roster> MAPPER = (row, index) -> new Roster(
             row.getLong("id"), row.getString("roster_name"), row.getLong("faction_id"),
             row.getString("faction_name"), row.getInt("ducat_limit"), row.getLong("unit_count"),
             row.getObject("created_at", OffsetDateTime.class).toInstant().toString(),
-            row.getObject("updated_at", OffsetDateTime.class).toInstant().toString());
+            row.getObject("updated_at", OffsetDateTime.class).toInstant().toString(), row.getLong("total_cost"),
+            row.getLong("ducat_limit") - row.getLong("total_cost"),
+            Math.max(0, row.getLong("total_cost") - row.getLong("ducat_limit")));
 
     public RosterService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
@@ -101,7 +106,8 @@ public class RosterService {
 
     public record Faction(long id, String name) {}
     public record Roster(long id, String rosterName, long factionId, String factionName,
-                         int ducatLimit, long unitCount, String createdAt, String updatedAt) {}
+                         int ducatLimit, long unitCount, String createdAt, String updatedAt,
+                         long totalCost, long remainingDucats, long overBudget) {}
     public static class MissingRoster extends RuntimeException {}
     public static class InvalidRoster extends RuntimeException {
         private final Map<String, String> fields;

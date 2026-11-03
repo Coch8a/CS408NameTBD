@@ -149,3 +149,22 @@ button:disabled:hover { background: var(--green); }
 .unit-recruitment h5 { font-size: 14px; font-weight: 700; margin: 0 0 12px; }
 .unit-recruitment .unit-search { max-width: 420px; }
 .recruitment-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 0 20px; max-height: 340px; overflow-y: auto; }
+
+.roster-costs { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--border); }
+.roster-costs span { color: var(--muted); }
+.roster-costs .budget-warning { color: #efbc77; }
+.equipment-panel { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; }
+.equipment-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.equipment-heading h5 { margin: 0; }
+.equipment-heading button, .equipment-quantity button { font-size: 12px; padding: 4px 8px; }
+.equipment-options { max-height: 500px; overflow-y: auto; padding-right: 4px; }
+.armour-choice { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 13px; }
+.armour-choice select { width: 100%; }
+.unit-detail-panel .equipment-group h6 { font-size: 13px; margin: 16px 0 4px; }
+.equipment-group ul { list-style: none; padding: 0; margin: 0; }
+.equipment-group li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.equipment-name { min-width: 0; font-size: 13px; }
+.equipment-name strong, .equipment-name span, .equipment-name small { display: block; overflow-wrap: anywhere; }
+.equipment-name span, .equipment-name small { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.equipment-quantity { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.equipment-quantity output { min-width: 16px; text-align: center; }

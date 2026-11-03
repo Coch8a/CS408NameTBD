@@ -7,6 +7,10 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
   const [selectedId, setSelectedId] = useState(null);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
+  const [equipmentBusy, setEquipmentBusy] = useState(false);
+  const [equipmentVersion, setEquipmentVersion] = useState(0);
+  const equipmentBusyRef = useRef(false);
+  const working = busy || equipmentBusy;
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const requestRef = useRef(null);
@@ -15,7 +19,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
   callbacks.current = { onRosterUpdated, onBusyChange, onSessionExpired };
 
   async function perform(action, message = '', selectAdded = false) {
-    if (busyRef.current) return;
+    if (busyRef.current || equipmentBusyRef.current) return;
     const controller = new AbortController();
     requestRef.current = controller;
     busyRef.current = true;
@@ -27,6 +31,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
       const result = await action(controller.signal);
       if (controller.signal.aborted) return;
       setView(result);
+      setEquipmentVersion(current => current + 1);
       setSelectedId(current => {
         if (selectAdded) {
           const previousIds = new Set((view?.units ?? []).map(unit => unit.id));
@@ -73,7 +78,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
 
   return <section className="roster-units" aria-labelledby="roster-units-heading">
     <div className="unit-section-heading"><h4 id="roster-units-heading">Units</h4>
-      <button type="button" disabled={busy} onClick={load}>Refresh units</button></div>
+      <button type="button" disabled={working} onClick={load}>Refresh units</button></div>
     {busy && <p className="unit-feedback" role="status">Updating units…</p>}
     {notice && <p className="unit-feedback account-notice" role="status">{notice}</p>}
     {error && <p className="unit-feedback account-error" role="alert">{error}</p>}
@@ -84,14 +89,25 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           {!view.units.length && <p className="unit-empty">No units added.</p>}
           <ul className="unit-list saved-unit-list">{view.units.map((unit, index) => <li key={unit.id}>
             <button type="button" className="unit-select" aria-pressed={unit.id === selectedId}
-              aria-label={`Select ${unit.name} ${index + 1}`} disabled={busy} onClick={() => setSelectedId(unit.id)}>
-              <strong>{unit.name}</strong><span>{unit.type}</span>
+              aria-label={`Select ${unit.name} ${index + 1}`} disabled={working} onClick={() => setSelectedId(unit.id)}>
+              <strong>{unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}</span>
             </button>
-            <button type="button" disabled={busy} aria-label={`Remove ${unit.name} ${index + 1}`}
+            <button type="button" disabled={working} aria-label={`Remove ${unit.name} ${index + 1}`}
               onClick={() => perform(signal => removeRosterUnit(rosterId, unit.id, signal), `${unit.name} removed.`)}>Remove</button>
           </li>)}</ul>
         </section>
-        <RosterUnitDetails unit={selectedUnit} />
+        <RosterUnitDetails key={`${selectedUnit?.id}:${equipmentVersion}`} unit={selectedUnit} rosterId={rosterId}
+          onSessionExpired={onSessionExpired} onBusyChange={value => {
+            equipmentBusyRef.current = value;
+            setEquipmentBusy(value);
+            callbacks.current.onBusyChange(busyRef.current || value);
+          }} onUpdated={result => {
+            setView(current => current && current.roster.id === result.roster.id ? {
+              ...current, roster: result.roster,
+              units: current.units.map(unit => unit.id === result.rosterUnitId ? { ...unit, costs: result.unitCost } : unit)
+            } : current);
+            callbacks.current.onRosterUpdated(result.roster);
+          }} />
       </div>
         <section className="unit-recruitment" aria-labelledby="available-units-heading">
           <h5 id="available-units-heading">Available units</h5>
@@ -100,7 +116,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           {!available.length && <p className="unit-empty">{view.availableUnits.length ? 'No units match your search.' : 'No units available for this faction.'}</p>}
           <ul className="unit-list recruitment-list">{available.map(unit => <li key={unit.id}>
             <div><strong>{unit.name}</strong><span>{unit.type} · {recruitmentPrice(unit)} ducats</span></div>
-            <button type="button" disabled={busy} aria-label={`Add ${unit.name}`}
+            <button type="button" disabled={working} aria-label={`Add ${unit.name}`}
               onClick={() => perform(signal => addRosterUnit(rosterId, unit.id, signal), `${unit.name} added.`, true)}>Add unit</button>
           </li>)}</ul>
         </section>

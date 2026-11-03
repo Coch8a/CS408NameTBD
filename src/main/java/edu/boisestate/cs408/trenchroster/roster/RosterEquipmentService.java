@@ -14,16 +14,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class RosterEquipmentService {
     private final JdbcTemplate jdbc;
     private final RosterService rosters;
+    private final RosterCostService costs;
 
-    public RosterEquipmentService(JdbcTemplate jdbc, RosterService rosters) {
+    public RosterEquipmentService(JdbcTemplate jdbc, RosterService rosters, RosterCostService costs) {
         this.jdbc = jdbc;
         this.rosters = rosters;
+        this.costs = costs;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public EquipmentView view(long ownerId, long rosterId, long entryId) {
         var roster = rosters.get(ownerId, rosterId);
-        return snapshot(roster, unit(rosterId, entryId));
+        return snapshot(ownerId, roster, unit(rosterId, entryId));
     }
 
     @Transactional
@@ -47,10 +49,10 @@ public class RosterEquipmentService {
                     entryId, equipmentId, quantity);
         }
         jdbc.update("UPDATE rosters SET updated_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?", rosterId, ownerId);
-        return snapshot(rosters.get(ownerId, rosterId), unit);
+        return snapshot(ownerId, rosters.get(ownerId, rosterId), unit);
     }
 
-    private EquipmentView snapshot(RosterService.Roster roster, Unit unit) {
+    private EquipmentView snapshot(long ownerId, RosterService.Roster roster, Unit unit) {
         var rules = rules(unit);
         var selected = quantities(unit.entryId());
         var usage = usage(roster.id(), unit.entryId());
@@ -68,10 +70,13 @@ public class RosterEquipmentService {
             int quantity = selected.getOrDefault(rule.id(), 0);
             int desired = rule.slot().equals("armour") ? 1 : quantity + 1;
             String reason = validate(unit, changed(selected, rules, rule.id(), desired), rules, usage);
+            String decreaseReason = quantity == 0 ? "Not equipped." : validate(unit,
+                    changed(selected, rules, rule.id(), quantity - 1), rules, usage);
             return new Option(rule.id(), rule.name(), rule.type(), rule.catalogueCost(), rule.purchaseCost(),
-                    quantity, rule.max(), rule.included(), reason.isEmpty(), reason);
+                    quantity, rule.max(), rule.included(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
         }).toList();
-        return new EquipmentView(roster, unit.entryId(), equipped, available);
+        return new EquipmentView(roster, unit.entryId(), unit.requiresArmour(),
+                costs.units(ownerId, roster.id()).get(unit.entryId()), equipped, available);
     }
 
     private Unit unit(long rosterId, long entryId) {
@@ -185,7 +190,7 @@ public class RosterEquipmentService {
     public record Equipped(long id, String name, String type, int quantity, int catalogueCost,
                            int purchaseCost, boolean includedInRecruitment) {}
     public record Option(long id, String name, String type, int catalogueCost, int purchaseCost, int quantity,
-                         int maxQuantity, boolean includedInRecruitment, boolean compatible, String reason) {}
-    public record EquipmentView(RosterService.Roster roster, long rosterUnitId,
+                         int maxQuantity, boolean includedInRecruitment, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
+    public record EquipmentView(RosterService.Roster roster, long rosterUnitId, boolean requiresArmour, RosterCostService.UnitCost unitCost,
                                 List<Equipped> equipment, List<Option> availableEquipment) {}
 }
