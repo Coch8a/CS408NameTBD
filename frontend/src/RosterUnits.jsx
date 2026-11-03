@@ -85,13 +85,13 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           <ul className="unit-list saved-unit-list">{view.units.map((unit, index) => <li key={unit.id}>
             <button type="button" className="unit-select" aria-pressed={unit.id === selectedId}
               aria-label={`Select ${unit.name} ${index + 1}`} disabled={busy} onClick={() => setSelectedId(unit.id)}>
-              <strong>{index + 1}. {unit.name}</strong><span>{unit.type}</span>
+              <strong>{unit.name}</strong><span>{unit.type}</span>
             </button>
             <button type="button" disabled={busy} aria-label={`Remove ${unit.name} ${index + 1}`}
               onClick={() => perform(signal => removeRosterUnit(rosterId, unit.id, signal), `${unit.name} removed.`)}>Remove</button>
           </li>)}</ul>
         </section>
-        <RosterUnitDetails unit={selectedUnit} position={selectedIndex + 1} />
+        <RosterUnitDetails unit={selectedUnit} />
       </div>
         <section className="unit-recruitment" aria-labelledby="available-units-heading">
           <h5 id="available-units-heading">Available units</h5>

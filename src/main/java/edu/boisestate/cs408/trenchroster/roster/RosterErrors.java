@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /** Safe API errors never disclose another account's roster or database details. */
-@RestControllerAdvice(assignableTypes = {RosterController.class, RosterUnitController.class})
+@RestControllerAdvice(assignableTypes = {RosterController.class, RosterUnitController.class, RosterEquipmentController.class})
 public class RosterErrors {
     public record ErrorResponse(String message, Map<String, String> errors) {}
     @ExceptionHandler(RosterService.MissingRoster.class)

@@ -3,6 +3,7 @@ package edu.boisestate.cs408.trenchroster.roster;
 import java.util.List;
 import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,18 @@ public class RosterUnitService {
             throw new RosterService.InvalidRoster("Choose a unit from this roster's faction.",
                     Map.of("unitId", "This unit is not available for this faction."));
         }
-        jdbc.update("INSERT INTO roster_units (roster_id, unit_id, quantity) VALUES (?, ?, 1)", rosterId, unitId);
+        var key = new GeneratedKeyHolder();
+        jdbc.update(connection -> {
+            var statement = connection.prepareStatement(
+                    "INSERT INTO roster_units (roster_id, unit_id, quantity) VALUES (?, ?, 1)", new String[]{"id"});
+            statement.setLong(1, rosterId);
+            statement.setLong(2, unitId);
+            return statement;
+        }, key);
+        jdbc.update("""
+                INSERT INTO roster_equipment (roster_unit_id,equipment_id,quantity)
+                SELECT ?,equipment_id,1 FROM unit_equipment_rules WHERE unit_id=? AND default_selected=TRUE
+                """, key.getKey().longValue(), unitId);
         touch(ownerId, rosterId);
         return snapshot(ownerId, rosterId);
     }
