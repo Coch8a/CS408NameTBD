@@ -49,6 +49,46 @@ class WebEndpointsTest {
         assertTrue(response.body().contains("Bolt-Action Rifle"));
         assertTrue(response.body().contains("\"sampleData\":false"));
     }
+    @Test void catalogueCombinesUnitFiltersAndRespectsEquipmentEligibility() throws Exception {
+        long armour = jdbc.queryForObject("SELECT id FROM equipment WHERE name='Machine Armour'", Long.class);
+        var response = get("/api/catalog?faction=new-antioch&unitType=Heavy+infantry&unitMaxCost=85&equipmentId=" + armour);
+        assertEquals(200, response.statusCode(), response.body());
+        var result = AuthTestClient.JSON.readTree(response.body());
+        assertEquals(1, result.get("units").size());
+        assertEquals("Mechanized Heavy Infantry", result.get("units").get(0).get("name").asString());
+        assertEquals(15, result.get("equipment").size());
+
+        var eligible = get("/api/catalog?equipmentId=" + armour);
+        assertEquals(200, eligible.statusCode(), eligible.body());
+        var units = AuthTestClient.JSON.readTree(eligible.body()).get("units");
+        assertEquals(2, units.size());
+        assertEquals("Lieutenant", units.get(0).get("name").asString());
+        assertEquals("Mechanized Heavy Infantry", units.get(1).get("name").asString());
+    }
+    @Test void catalogueMatchesEquipmentNameWithoutCaseAndCombinesTypeAndCost() throws Exception {
+        var response = get("/api/catalog?q=RIFlE&equipmentType=Ranged+weapon&equipmentMaxCost=10");
+        assertEquals(200, response.statusCode(), response.body());
+        var result = AuthTestClient.JSON.readTree(response.body());
+        assertEquals(0, result.get("units").size());
+        assertEquals(1, result.get("equipment").size());
+        assertEquals("Bolt-Action Rifle", result.get("equipment").get(0).get("name").asString());
+
+        var unitResponse = get("/api/catalog?q=yeOMAN&unitMaxCost=30");
+        assertEquals(200, unitResponse.statusCode(), unitResponse.body());
+        var units = AuthTestClient.JSON.readTree(unitResponse.body()).get("units");
+        assertEquals(1, units.size());
+        assertEquals("Yeoman", units.get(0).get("name").asString());
+    }
+    @Test void catalogueReturnsEmptyResultsForLiteralSearchesAndUnsupportedFactions() throws Exception {
+        for (String query : new String[]{"q=%25", "faction=training-company"}) {
+            var response = get("/api/catalog?" + query);
+            assertEquals(200, response.statusCode(), response.body());
+            var result = AuthTestClient.JSON.readTree(response.body());
+            assertEquals(0, result.get("units").size());
+            assertEquals(0, result.get("equipment").size());
+        }
+        assertEquals(400, get("/api/catalog?unitMaxCost=-1").statusCode());
+    }
     @Test void catalogueCostsMatchPublishedRules() {
         assertEquals(70, jdbc.queryForObject("SELECT base_cost FROM units WHERE name='Lieutenant'", Integer.class));
         assertEquals(30, jdbc.queryForObject("SELECT base_cost FROM units WHERE name='Yeoman'", Integer.class));

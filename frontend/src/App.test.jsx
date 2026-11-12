@@ -15,17 +15,23 @@ const catalog = { rulesVersion: '1.0.2', sourceUrl: 'https://www.trenchcrusade.c
     { id: 5, name: 'Pistol', cost: 6, type: 'Ranged weapon', notes: '' },
     { id: 6, name: 'Combat Helmet', cost: 5, type: 'Equipment', notes: 'Headgear.' }
   ] };
-function healthyFetch(data = catalog) {
+function healthyFetch(data = catalog, filtered = data) {
   return vi.fn(async path => path === '/api/auth/me' ? { ok: false, status: 401 } : ({ ok: true, json: async () => path === '/api/health'
-    ? { status: 'UP', database: 'UP' } : data }));
+    ? { status: 'UP', database: 'UP' } : path.startsWith('/api/catalog?') ? filtered : data }));
 }
 afterEach(() => vi.unstubAllGlobals());
-async function renderCatalogue(data = catalog) {
-  vi.stubGlobal('fetch', healthyFetch(data));
+async function renderCatalogue(data = catalog, filtered = data) {
+  vi.stubGlobal('fetch', healthyFetch(data, filtered));
   const result = render(<App />);
   await screen.findByText('Catalogue available; database connected.');
   return result;
 }
+const unitTable = () => within(screen.getByRole('table', { name: /unit recruitment costs/ }));
+const equipmentTable = () => within(screen.getByRole('table', { name: /armoury prices/ }));
+const params = () => {
+  const request = fetch.mock.calls.find(([path]) => path.startsWith('/api/catalog?'));
+  return Object.fromEntries(new URLSearchParams(request[0].split('?')[1]));
+};
 describe('New Antioch catalogue', () => {
   it('shows unit costs, both armour options, and status as a plain list', async () => {
     const { container } = await renderCatalogue();
@@ -37,27 +43,47 @@ describe('New Antioch catalogue', () => {
     expect(container.querySelector('img, svg, canvas')).toBeNull();
     expect(container.textContent).not.toMatch(/checkpoint|sprint|student|educational|sample|CS408/i);
   });
-  it('searches units and equipment and clears filters', async () => {
-    await renderCatalogue();
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'pistol' } });
-    expect(screen.getByText('Pistol')).toBeTruthy();
-    expect(screen.queryByText('Combat Helmet')).toBeNull();
-    expect(screen.getByText('No units match your search.')).toBeTruthy();
+  it('searches on the server and clears filters', async () => {
+    await renderCatalogue(catalog, { ...catalog, units: [], equipment: [catalog.equipment[1]] });
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'PISTOL' } });
+    await screen.findByText('No units match your search.');
+    expect(params()).toEqual({ faction: 'new-antioch', q: 'PISTOL' });
+    expect(equipmentTable().getByRole('row', { name: /Pistol/ })).toBeTruthy();
+    expect(equipmentTable().queryByRole('row', { name: /Combat Helmet/ })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(screen.getByText('Combat Helmet')).toBeTruthy();
-    expect(screen.getByText('Lieutenant')).toBeTruthy();
+    expect(screen.getByRole('searchbox').value).toBe('');
+    expect(equipmentTable().getByRole('row', { name: /Combat Helmet/ })).toBeTruthy();
+    expect(unitTable().getByRole('row', { name: /Lieutenant/ })).toBeTruthy();
   });
-  it('filters equipment by category without hiding units', async () => {
-    await renderCatalogue();
+  it('combines equipment filters without hiding units', async () => {
+    await renderCatalogue(catalog, { ...catalog, equipment: [catalog.equipment[2]] });
     fireEvent.change(screen.getByRole('combobox', { name: 'Equipment category' }), { target: { value: 'Equipment' } });
-    expect(screen.getByText('Combat Helmet')).toBeTruthy();
-    expect(screen.queryByText('Pistol')).toBeNull();
-    expect(screen.getByText('Lieutenant')).toBeTruthy();
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Max equipment cost' }), { target: { value: '5' } });
+    await screen.findByRole('row', { name: /Combat Helmet/ });
+    expect(params()).toEqual({ faction: 'new-antioch', equipmentType: 'Equipment', equipmentMaxCost: '5' });
+    expect(equipmentTable().queryByRole('row', { name: /Pistol/ })).toBeNull();
+    expect(unitTable().getByRole('row', { name: /Lieutenant/ })).toBeTruthy();
   });
-  it('sorts rows alphabetically when selected', async () => {
-    await renderCatalogue();
+  it('combines unit type, cost and equipment eligibility and keeps the options after filtering', async () => {
+    await renderCatalogue(catalog, { ...catalog, units: [catalog.units[2]] });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Unit type' }), { target: { value: 'Heavy infantry' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Max unit cost' }), { target: { value: '85' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Unit can equip' }), { target: { value: '6' } });
+    await screen.findByRole('row', { name: /Mechanized Heavy Infantry/ });
+    expect(params()).toEqual({ faction: 'new-antioch', unitType: 'Heavy infantry', unitMaxCost: '85', equipmentId: '6' });
+    expect(unitTable().queryByRole('row', { name: /Yeoman/ })).toBeNull();
+    expect(screen.getByRole('option', { name: 'Infantry', exact: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByRole('spinbutton', { name: 'Max unit cost' }).value).toBe('');
+    expect(screen.getByRole('combobox', { name: 'Unit can equip' }).value).toBe('');
+    expect(unitTable().getByRole('row', { name: /Yeoman/ })).toBeTruthy();
+  });
+  it('requests rows in alphabetical order when selected', async () => {
+    await renderCatalogue(catalog, { ...catalog, equipment: [catalog.equipment[0], catalog.equipment[2], catalog.equipment[1]] });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Sort alphabetically' }));
-    const rows = within(screen.getByRole('table', { name: /armoury prices/ })).getAllByRole('row');
+    await screen.findByRole('row', { name: /Pistol/ });
+    expect(params()).toEqual({ faction: 'new-antioch', alphabetical: 'true' });
+    const rows = equipmentTable().getAllByRole('row');
     expect(rows[1].textContent).toContain('Bolt-Action Rifle');
     expect(rows[2].textContent).toContain('Combat Helmet');
     expect(rows[3].textContent).toContain('Pistol');

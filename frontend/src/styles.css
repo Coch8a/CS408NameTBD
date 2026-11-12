@@ -39,10 +39,11 @@ main { padding: 16px 18px 28px; }
 h1 { font-size: 23px; font-weight: 700; }
 .catalog-heading span { color: var(--muted); font-size: 13px; }
 .catalog-intro { margin-top: 5px; font-size: 13px; color: var(--muted); }
-.toolbar { display: flex; align-items: flex-end; gap: 12px; padding: 13px 0 17px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; padding: 13px 0 17px; }
 .toolbar label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; }
 .toolbar .search-field { flex: 1; max-width: 420px; min-width: 180px; }
-.toolbar select { min-width: 150px; }
+.toolbar select { min-width: 150px; max-width: 220px; }
+.toolbar input[type=number] { width: 110px; min-height: 34px; padding: 6px 9px; color: var(--text); background: #303431; border: 1px solid #697263; }
 .toolbar .sort-control { flex-direction: row; align-items: center; align-self: flex-end; min-height: 34px; white-space: nowrap; gap: 7px; }
 .catalog-panel { margin-bottom: 16px; border: 1px solid var(--border); background: var(--panel); }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; min-height: 36px; padding: 7px 10px; background: var(--green); border-bottom: 1px solid var(--border); }

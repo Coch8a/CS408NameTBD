@@ -1,19 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { loadProject } from './api.js';
+import { loadCatalogue, loadProject } from './api.js';
 import AccountPanel from './AccountPanel.jsx';
 import RosterDashboard from './RosterDashboard.jsx';
 import ProfileDetails from './ProfileDetails.jsx';
 
-/** Account workspace and public catalogue with local search and category filters. */
+const emptyFilters = {
+  q: '', unitType: '', unitMaxCost: '', equipmentId: '', equipmentType: '', equipmentMaxCost: '', alphabetical: false,
+};
+const validCost = value => value === '' || (/^\d+$/.test(value) && Number(value) <= 2147483647);
+
+/** Account workspace and public catalogue. */
 export default function App() {
   const [user, setUser] = useState(null);
   const [sessionRevision, setSessionRevision] = useState(0);
   const [project, setProject] = useState(null);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
-  const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('All categories');
-  const [alphabetical, setAlphabetical] = useState(false);
+  const [filters, setFilters] = useState(emptyFilters);
+  const [filtered, setFiltered] = useState(null);
+  const [filterRetry, setFilterRetry] = useState(0);
+  const entries = Object.entries({ ...filters, q: filters.q.trim() })
+    .filter(([, value]) => value !== '' && value !== false);
+  const search = entries.length ? new URLSearchParams([['faction', 'new-antioch'], ...entries]).toString() : '';
+  const invalidCost = !validCost(filters.unitMaxCost) || !validCost(filters.equipmentMaxCost);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,14 +36,28 @@ export default function App() {
     return () => controller.abort();
   }, [attempt]);
 
+  useEffect(() => {
+    setFiltered(null);
+    if (!project || !search || invalidCost) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      loadCatalogue(search, controller.signal).then(catalog => {
+        if (!controller.signal.aborted) setFiltered({ search, catalog });
+      }).catch(reason => {
+        if (!controller.signal.aborted) setFiltered({ search, error: reason.message });
+      });
+    }, 200);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [project, search, invalidCost, filterRetry]);
+
   const catalog = project?.catalog;
-  const needle = query.trim().toLowerCase();
-  const matches = item => `${item.name} ${item.type}`.toLowerCase().includes(needle);
-  const sorted = items => alphabetical ? [...items].sort((a, b) => a.name.localeCompare(b.name)) : items;
-  const units = sorted((catalog?.units ?? []).filter(matches));
-  const equipment = sorted((catalog?.equipment ?? []).filter(item => matches(item) &&
-    (category === 'All categories' || item.type === category)));
+  const result = filtered?.search === search ? filtered : null;
+  const matches = invalidCost ? null : search ? result?.catalog : catalog;
+  const units = matches?.units ?? [];
+  const equipment = matches?.equipment ?? [];
+  const unitTypes = [...new Set((catalog?.units ?? []).map(unit => unit.type))];
   const categories = [...new Set((catalog?.equipment ?? []).map(item => item.type))];
+  const change = (key, value) => setFilters(current => ({ ...current, [key]: value }));
 
   return <>
     <header className="app-header">
@@ -63,14 +86,21 @@ export default function App() {
         </section>}
         <div className="catalog-heading"><h1>New Antioch</h1><span>Catalogue</span></div>
         <div className="toolbar" role="search" aria-label="Catalogue filters">
-          <label className="search-field">Search catalogue<input type="search" value={query} placeholder="Search units, weapons or equipment" onChange={event => setQuery(event.target.value)}/></label>
-          <label>Equipment category<select value={category} onChange={event => setCategory(event.target.value)}><option>All categories</option>{categories.map(type => <option key={type}>{type}</option>)}</select></label>
-          <label className="sort-control"><input type="checkbox" checked={alphabetical} onChange={event => setAlphabetical(event.target.checked)}/>Sort alphabetically</label>
-          <button type="button" onClick={() => { setQuery(''); setCategory('All categories'); setAlphabetical(false); }}>Clear filters</button>
+          <label className="search-field">Search catalogue<input type="search" value={filters.q} placeholder="Search units, weapons or equipment" onChange={event => change('q', event.target.value)}/></label>
+          <label>Unit type<select value={filters.unitType} onChange={event => change('unitType', event.target.value)}><option value="">All unit types</option>{unitTypes.map(type => <option key={type}>{type}</option>)}</select></label>
+          <label>Max unit cost<input type="number" min="0" step="1" value={filters.unitMaxCost} onChange={event => change('unitMaxCost', event.target.value)}/></label>
+          <label>Unit can equip<select value={filters.equipmentId} onChange={event => change('equipmentId', event.target.value)}><option value="">Any item</option>{(catalog?.equipment ?? []).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Equipment category<select value={filters.equipmentType} onChange={event => change('equipmentType', event.target.value)}><option value="">All categories</option>{categories.map(type => <option key={type}>{type}</option>)}</select></label>
+          <label>Max equipment cost<input type="number" min="0" step="1" value={filters.equipmentMaxCost} onChange={event => change('equipmentMaxCost', event.target.value)}/></label>
+          <label className="sort-control"><input type="checkbox" checked={filters.alphabetical} onChange={event => change('alphabetical', event.target.checked)}/>Sort alphabetically</label>
+          <button type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button>
         </div>
         {!project && !error && <p role="status" className="message">Loading catalogue…</p>}
         {error && <div role="alert" className="error-message"><span>{error}</span><button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button></div>}
-        {project && <>
+        {invalidCost && <p role="alert" className="message">Use whole ducat amounts from 0 to 2,147,483,647.</p>}
+        {project && search && !invalidCost && !result && <p role="status" className="message">Filtering catalogue…</p>}
+        {result?.error && !invalidCost && <div role="alert" className="error-message"><span>{result.error}</span><button type="button" onClick={() => setFilterRetry(value => value + 1)}>Try again</button></div>}
+        {matches && <>
           <section className="catalog-panel" id="units" aria-labelledby="units-heading">
             <div className="panel-heading"><h2 id="units-heading">Units</h2><span>{units.length} of {catalog.units.length}</span></div>
             <table><caption className="visually-hidden">New Antioch unit recruitment costs</caption>
