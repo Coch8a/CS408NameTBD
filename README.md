@@ -37,6 +37,13 @@ The catalogue includes selected New Antioch units and equipment with search, equ
 - Recruitment discounts and included armour pricing without duplicate charges.
 - Tests for cost calculations, equipment restrictions, ownership, concurrent changes, failed saves, and persistence after restart.
 
+### Checkpoint 5 — Profiles, validation, and catalogue filters
+
+- Expand **Rules** to view unit and equipment stats, keywords, and source references. The roster editor shows equipped items and updates unit stats when the loadout changes.
+- New Antioch requires one Lieutenant. Missing leaders and over-budget totals show warnings, and drafts stay editable. New additions that exceed a unit cap or break an equipment restriction are blocked.
+- The public catalogue supports case-insensitive name search and combined filters for type, maximum cost, and unit equipment eligibility.
+- Tests cover required units, unit caps, ducat limits, combined filters, and empty results.
+
 ## Prerequisites
 
 Use Ubuntu 24.04 or Ubuntu through WSL. Run scripts in Bash as a normal Linux user. Required tools are JDK 21, Maven 3.6.3+, Node.js 24, and PostgreSQL 16+. Internet access is required to download dependencies.
@@ -139,6 +146,8 @@ Flyway applies migrations at startup:
 - V4 adds normalized account identities.
 - V5 splits grouped roster units into individual entries and preserves existing equipment assignments.
 - V6 adds equipment compatibility rules, recruitment prices, and default Heavy Infantry armour.
+- V7 adds unit and equipment profiles and their rule references.
+- V8 adds required unit counts and sets the Lieutenant minimum to one.
 
 SQL migrations are in `src/main/resources/db/migration/`. V5 is a Java migration in `src/main/java/db/migration/`. Add a new version for database changes; do not edit applied migrations. Older sample catalogue rows remain for existing references but are excluded from the public catalogue.
 
