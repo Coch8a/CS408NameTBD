@@ -104,7 +104,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           }} onUpdated={result => {
             setView(current => current && current.roster.id === result.roster.id ? {
               ...current, roster: result.roster,
-              units: current.units.map(unit => unit.id === result.rosterUnitId ? { ...unit, costs: result.unitCost } : unit)
+              units: current.units.map(unit => unit.id === result.rosterUnitId ? { ...unit, costs: result.unitCost, profile: result.unitProfile ?? unit.profile } : unit)
             } : current);
             callbacks.current.onRosterUpdated(result.roster);
           }} />

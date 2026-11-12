@@ -1,5 +1,6 @@
 package edu.boisestate.cs408.trenchroster.roster;
 
+import edu.boisestate.cs408.trenchroster.catalog.ProfileService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,11 +16,13 @@ public class RosterEquipmentService {
     private final JdbcTemplate jdbc;
     private final RosterService rosters;
     private final RosterCostService costs;
+    private final ProfileService profiles;
 
-    public RosterEquipmentService(JdbcTemplate jdbc, RosterService rosters, RosterCostService costs) {
+    public RosterEquipmentService(JdbcTemplate jdbc, RosterService rosters, RosterCostService costs, ProfileService profiles) {
         this.jdbc = jdbc;
         this.rosters = rosters;
         this.costs = costs;
+        this.profiles = profiles;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -76,7 +79,8 @@ public class RosterEquipmentService {
                     quantity, rule.max(), rule.included(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
         }).toList();
         return new EquipmentView(roster, unit.entryId(), unit.requiresArmour(),
-                costs.units(ownerId, roster.id()).get(unit.entryId()), equipped, available);
+                costs.units(ownerId, roster.id()).get(unit.entryId()), equipped, available,
+                profiles.rosterStats(ownerId, roster.id(), unit.entryId()).get(unit.entryId()));
     }
 
     private Unit unit(long rosterId, long entryId) {
@@ -192,5 +196,5 @@ public class RosterEquipmentService {
     public record Option(long id, String name, String type, int catalogueCost, int purchaseCost, int quantity,
                          int maxQuantity, boolean includedInRecruitment, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
     public record EquipmentView(RosterService.Roster roster, long rosterUnitId, boolean requiresArmour, RosterCostService.UnitCost unitCost,
-                                List<Equipped> equipment, List<Option> availableEquipment) {}
+                                List<Equipped> equipment, List<Option> availableEquipment, ProfileService.UnitStats unitProfile) {}
 }

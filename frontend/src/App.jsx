@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { loadProject } from './api.js';
 import AccountPanel from './AccountPanel.jsx';
 import RosterDashboard from './RosterDashboard.jsx';
+import ProfileDetails from './ProfileDetails.jsx';
 
 /** Account workspace and public catalogue with local search and category filters. */
 export default function App() {
@@ -73,16 +74,16 @@ export default function App() {
           <section className="catalog-panel" id="units" aria-labelledby="units-heading">
             <div className="panel-heading"><h2 id="units-heading">Units</h2><span>{units.length} of {catalog.units.length}</span></div>
             <table><caption className="visually-hidden">New Antioch unit recruitment costs</caption>
-              <thead><tr><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Limit</th><th scope="col" className="numeric">Ducats</th></tr></thead>
-              <tbody>{units.map(unit => <tr key={unit.id}><th scope="row">{unit.name}</th><td>{unit.type}</td><td>{unit.limit || 'Unlimited'}</td><td className="numeric cost">{unit.cost}{unit.alternateCost > 0 ? ` / ${unit.alternateCost}` : ''}</td></tr>)}</tbody>
+              <thead><tr><th scope="col">Unit</th><th scope="col">Role</th><th scope="col">Limit</th><th scope="col" className="numeric">Ducats</th><th scope="col">Profile / rules</th></tr></thead>
+              <tbody>{units.map(unit => <tr key={unit.id}><th scope="row">{unit.name}</th><td>{unit.type}</td><td>{unit.limit || 'Unlimited'}</td><td className="numeric cost">{unit.cost}{unit.alternateCost > 0 ? ` / ${unit.alternateCost}` : ''}</td><td className="catalog-profile"><ProfileDetails kind="units" id={unit.id} name={unit.name} /></td></tr>)}</tbody>
             </table>
             {units.length === 0 && <p className="empty-message">No units match your search.</p>}
           </section>
           <section className="catalog-panel" id="equipment" aria-labelledby="equipment-heading">
             <div className="panel-heading"><h2 id="equipment-heading">Weapons &amp; equipment</h2><span>{equipment.length} of {catalog.equipment.length}</span></div>
             <table><caption className="visually-hidden">Selected New Antioch armoury prices</caption>
-              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Ducats</th></tr></thead>
-              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost}</td></tr>)}</tbody>
+              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Ducats</th><th scope="col">Profile / rules</th></tr></thead>
+              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost}</td><td className="catalog-profile"><ProfileDetails kind="equipment" id={item.id} name={item.name} /></td></tr>)}</tbody>
             </table>
             {equipment.length === 0 && <p className="empty-message">No equipment matches your filters.</p>}
           </section>

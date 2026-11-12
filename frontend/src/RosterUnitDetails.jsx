@@ -1,5 +1,6 @@
 import React from 'react';
 import EquipmentPanel from './EquipmentPanel.jsx';
+import ProfileDetails, { ProfileStats } from './ProfileDetails.jsx';
 
 export const recruitmentPrice = unit => unit.alternateCost > 0
   ? `${unit.cost} / ${unit.alternateCost}` : String(unit.cost);
@@ -17,6 +18,8 @@ export default function RosterUnitDetails({ unit, rosterId, onUpdated, onBusyCha
           <div><dt>Total</dt><dd>{unit.costs.totalCost} ducats</dd></div>
         </>}
       </dl>
+      <ProfileStats profile={unit.profile} />
+      {unit.profile && <ProfileDetails kind="units" id={unit.unitId} name={unit.name} showStats={false} />}
       {unit.costs && <EquipmentPanel rosterId={rosterId} unitId={unit.id} onUpdated={onUpdated}
         onBusyChange={onBusyChange} onSessionExpired={onSessionExpired} />}
     </> : <p className="unit-empty">Select a unit to view its details.</p>}

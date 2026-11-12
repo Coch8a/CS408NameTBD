@@ -23,7 +23,8 @@ public class SecurityConfiguration {
             .authorizeHttpRequests(access -> access
                 .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                 .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**", "/favicon.ico",
-                        "/api/health", "/api/catalog", "/api/checkpoint", "/api/auth/csrf").permitAll()
+                        "/api/health", "/api/catalog", "/api/catalog/units/{id}/profile",
+                        "/api/catalog/equipment/{id}/profile", "/api/checkpoint", "/api/auth/csrf").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login").permitAll()
                 .anyRequest().authenticated())
             .csrf(Customizer.withDefaults())

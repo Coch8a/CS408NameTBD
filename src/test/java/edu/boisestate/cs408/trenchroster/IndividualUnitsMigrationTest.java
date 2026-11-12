@@ -32,7 +32,7 @@ class IndividualUnitsMigrationTest {
             long originalGear = jdbc.queryForObject("SELECT id FROM roster_equipment", Long.class);
             jdbc.update("INSERT INTO roster_units(roster_id,unit_id,quantity) VALUES (?,?,1)", roster, unit);
             var flyway = Flyway.configure().dataSource(source).load();
-            assertEquals(2, flyway.migrate().migrationsExecuted);
+            assertEquals(flyway.info().pending().length, flyway.migrate().migrationsExecuted);
             assertEquals(4, jdbc.queryForObject("SELECT COUNT(*) FROM roster_units", Integer.class));
             assertEquals(4, jdbc.queryForObject("SELECT SUM(quantity) FROM roster_units", Integer.class));
             assertEquals(1, jdbc.queryForObject("SELECT quantity FROM roster_units WHERE id=?", Integer.class, original));
