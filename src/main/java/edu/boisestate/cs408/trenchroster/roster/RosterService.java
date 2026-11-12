@@ -7,12 +7,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Persists roster settings, scoping every roster lookup and mutation to its owner. */
 @Service
 public class RosterService {
     private final JdbcTemplate jdbc;
+    private final RosterValidation validation;
     private static final String SELECT = """
             SELECT r.id, r.roster_name, r.faction_id, f.name AS faction_name,
                    r.ducat_limit, r.created_at, r.updated_at, COALESCE(costs.total_cost,0) AS total_cost,
@@ -28,9 +30,12 @@ public class RosterService {
             row.getObject("created_at", OffsetDateTime.class).toInstant().toString(),
             row.getObject("updated_at", OffsetDateTime.class).toInstant().toString(), row.getLong("total_cost"),
             row.getLong("ducat_limit") - row.getLong("total_cost"),
-            Math.max(0, row.getLong("total_cost") - row.getLong("ducat_limit")));
+            Math.max(0, row.getLong("total_cost") - row.getLong("ducat_limit")), List.of());
 
-    public RosterService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+    public RosterService(JdbcTemplate jdbc, RosterValidation validation) {
+        this.jdbc = jdbc;
+        this.validation = validation;
+    }
 
     public List<Faction> factions() {
         // Match the currently supported catalogue; exclude the legacy demo faction.
@@ -42,10 +47,12 @@ public class RosterService {
         return jdbc.query(SELECT + " WHERE r.user_id=? ORDER BY r.updated_at DESC, r.id DESC", MAPPER, ownerId);
     }
 
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public Roster get(long ownerId, long id) {
         var rows = jdbc.query(SELECT + " WHERE r.user_id=? AND r.id=?", MAPPER, ownerId, id);
         if (rows.isEmpty()) throw new MissingRoster();
-        return rows.getFirst();
+        var roster = rows.getFirst();
+        return roster.withUnitIssues(validation.unitIssues(id, roster.factionId()));
     }
 
     @Transactional
@@ -107,7 +114,12 @@ public class RosterService {
     public record Faction(long id, String name) {}
     public record Roster(long id, String rosterName, long factionId, String factionName,
                          int ducatLimit, long unitCount, String createdAt, String updatedAt,
-                         long totalCost, long remainingDucats, long overBudget) {}
+                         long totalCost, long remainingDucats, long overBudget, List<String> unitIssues) {
+        Roster withUnitIssues(List<String> issues) {
+            return new Roster(id, rosterName, factionId, factionName, ducatLimit, unitCount,
+                    createdAt, updatedAt, totalCost, remainingDucats, overBudget, issues);
+        }
+    }
     public static class MissingRoster extends RuntimeException {}
     public static class InvalidRoster extends RuntimeException {
         private final Map<String, String> fields;

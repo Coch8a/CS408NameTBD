@@ -217,9 +217,14 @@ export default function RosterDashboard({ onSessionExpired }) {
           {selected.totalCost !== undefined && <div className="roster-costs" aria-live="polite">
             <strong>{selected.totalCost.toLocaleString()} / {selected.ducatLimit.toLocaleString()} ducats</strong>
             <span className={selected.overBudget > 0 ? 'budget-warning' : ''}>
-              {selected.overBudget > 0 ? `${selected.overBudget.toLocaleString()} over budget` : `${selected.remainingDucats.toLocaleString()} remaining`}
+              {selected.overBudget > 0 ? `${selected.overBudget.toLocaleString()} ducats over budget` : `${selected.remainingDucats.toLocaleString()} remaining`}
             </span>
           </div>}
+          <div aria-live="polite">
+            {selected.unitIssues?.length > 0 && <ul className="roster-issues" aria-label="Roster issues">
+              {selected.unitIssues.map(issue => <li key={issue}>{issue}</li>)}
+            </ul>}
+          </div>
           {mode === 'delete' ? <div className="delete-confirmation" role="group" aria-label="Confirm roster deletion">
             <p>Delete “{selected.rosterName}”? This permanently removes the roster and its saved units and equipment.</p>
             <div className="roster-actions"><button type="button" className="danger-button" disabled={working} onClick={remove}>Confirm delete</button>

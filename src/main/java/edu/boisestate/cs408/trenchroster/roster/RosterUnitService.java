@@ -2,7 +2,6 @@ package edu.boisestate.cs408.trenchroster.roster;
 
 import edu.boisestate.cs408.trenchroster.catalog.ProfileService;
 import java.util.List;
-import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.stereotype.Service;
@@ -15,12 +14,15 @@ public class RosterUnitService {
     private final RosterService rosters;
     private final RosterCostService costs;
     private final ProfileService profiles;
+    private final RosterValidation validation;
 
-    public RosterUnitService(JdbcTemplate jdbc, RosterService rosters, RosterCostService costs, ProfileService profiles) {
+    public RosterUnitService(JdbcTemplate jdbc, RosterService rosters, RosterCostService costs,
+                             ProfileService profiles, RosterValidation validation) {
         this.jdbc = jdbc;
         this.rosters = rosters;
         this.costs = costs;
         this.profiles = profiles;
+        this.validation = validation;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -31,10 +33,7 @@ public class RosterUnitService {
     @Transactional
     public UnitView add(long ownerId, long rosterId, long unitId) {
         long factionId = rosters.lock(ownerId, rosterId);
-        if (jdbc.queryForObject("SELECT COUNT(*) FROM units WHERE id=? AND faction_id=?", Long.class, unitId, factionId) == 0) {
-            throw new RosterService.InvalidRoster("Choose a unit from this roster's faction.",
-                    Map.of("unitId", "This unit is not available for this faction."));
-        }
+        validation.checkAdd(rosterId, factionId, unitId);
         var key = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             var statement = connection.prepareStatement(

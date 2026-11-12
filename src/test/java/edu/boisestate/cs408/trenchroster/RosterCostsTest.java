@@ -71,11 +71,37 @@ class RosterCostsTest {
         long entry=add("Lieutenant");
         var exact=rosters.update(owner,roster,new RosterRequest("Costs",faction,70));
         assertEquals(0,exact.remainingDucats());assertEquals(0,exact.overBudget());
+        assertTrue(exact.unitIssues().isEmpty());
         var over=set(entry,"Pistol",2).roster();
         assertEquals(82,over.totalCost());assertEquals(-12,over.remainingDucats());assertEquals(12,over.overBudget());
+        var fixed=set(entry,"Pistol",0).roster();
+        assertEquals(0,fixed.overBudget());assertEquals(70,fixed.totalCost());
+        set(entry,"Pistol",2);
         var changed=rosters.update(owner,roster,new RosterRequest("Costs",faction,100));
         assertEquals(18,changed.remainingDucats());assertEquals(0,changed.overBudget());
     }
+    @Test void requiredLieutenantWarningClearsAndLegacyDuplicatesCanBeRemoved() {
+        assertEquals(java.util.List.of("Add a Lieutenant."), rosters.get(owner, roster).unitIssues());
+        long entry = add("Lieutenant");
+        assertTrue(units.view(owner, roster).roster().unitIssues().isEmpty());
+        var rejected = assertThrows(RosterService.InvalidRoster.class, () -> add("Lieutenant"));
+        assertEquals("Lieutenant: maximum 1 per roster.", rejected.getMessage());
+        assertEquals(1, units.view(owner, roster).units().size());
+
+        jdbc.update("INSERT INTO roster_units (roster_id, unit_id) SELECT roster_id, unit_id FROM roster_units WHERE id=?", entry);
+        assertEquals(java.util.List.of("Lieutenant: 2 selected (maximum 1)."), rosters.get(owner, roster).unitIssues());
+        assertTrue(units.remove(owner, roster, entry).roster().unitIssues().isEmpty());
+        long remaining = units.view(owner, roster).units().getFirst().id();
+        assertEquals(java.util.List.of("Add a Lieutenant."), units.remove(owner, roster, remaining).roster().unitIssues());
+    }
+
+    @Test void heavyInfantryCanReachButNotExceedTheCatalogueLimit() {
+        for (int i = 0; i < 3; i++) add("Mechanized Heavy Infantry");
+        var rejected = assertThrows(RosterService.InvalidRoster.class, () -> add("Mechanized Heavy Infantry"));
+        assertEquals("Mechanized Heavy Infantry: maximum 3 per roster.", rejected.getMessage());
+        assertEquals(3, rosters.get(owner, roster).unitCount());
+    }
+
     @Test void rejectedLoadoutsDoNotChangeCostsOrEquipment() {
         long entry=add("Mechanized Heavy Infantry");
         set(entry,"Machine Armour",1);

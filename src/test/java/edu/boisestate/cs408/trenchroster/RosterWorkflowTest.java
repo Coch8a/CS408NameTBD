@@ -58,7 +58,7 @@ class RosterWorkflowTest {
                 rosterId = expect(201, client.postJson("/api/rosters", Map.of(
                         "rosterName", "First Company", "factionId", faction, "ducatLimit", 700))).get("id").asLong();
                 String path = "/api/rosters/" + rosterId;
-                unitId = expect(200, client.get(path + "/units")).get("availableUnits").get(0).get("id").asLong();
+                unitId = jdbc.queryForObject("SELECT id FROM units WHERE faction_id=? AND name='Yeoman'", Long.class, faction);
                 expect(201, client.postJson(path + "/units", Map.of("unitId", unitId)));
                 var units = expect(201, client.postJson(path + "/units", Map.of("unitId", unitId))).get("units");
                 long removed = units.get(0).get("id").asLong();

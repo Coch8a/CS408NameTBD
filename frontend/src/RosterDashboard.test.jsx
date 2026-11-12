@@ -5,7 +5,8 @@ import RosterDashboard from './RosterDashboard.jsx';
 import * as api from './rosterApi.js';
 
 vi.mock('./rosterApi.js', () => ({ createRoster: vi.fn(), deleteRoster: vi.fn(), getRoster: vi.fn(),
-  listRosterFactions: vi.fn(), listRosters: vi.fn(), updateRoster: vi.fn() }));
+  listRosterFactions: vi.fn(), listRosters: vi.fn(), updateRoster: vi.fn(),
+  getRosterUnits: vi.fn(), addRosterUnit: vi.fn() }));
 const roster = { id: 12, rosterName: 'First Company', factionId: 2, factionName: 'New Antioch',
   ducatLimit: 700, unitCount: 0, createdAt: '2026-10-01T10:00:00Z', updatedAt: '2026-10-01T10:00:00Z' };
 beforeEach(() => {
@@ -13,6 +14,7 @@ beforeEach(() => {
   api.listRosters.mockResolvedValue([roster]);
   api.listRosterFactions.mockResolvedValue([{ id: 2, name: 'New Antioch' }]);
   api.getRoster.mockResolvedValue(roster);
+  api.getRosterUnits.mockResolvedValue({ roster, units: [], availableUnits: [] });
 });
 async function ready(onSessionExpired = vi.fn()) {
   const view = render(<RosterDashboard onSessionExpired={onSessionExpired} />);
@@ -144,4 +146,21 @@ describe('Saved roster dashboard', () => {
     expect(screen.getByText(/No saved rosters/)).toBeTruthy();
   });
 
+});
+
+it('shows the required unit warning and clears it after a successful add', async () => {
+  const draft = { ...roster, totalCost: 0, overBudget: 0, remainingDucats: 700,
+    unitIssues: ['Add a Lieutenant.'] };
+  const lieutenant = { id: 3, name: 'Lieutenant', type: 'Leader', cost: 70 };
+  api.getRoster.mockResolvedValue(draft);
+  api.getRosterUnits.mockResolvedValue({ roster: draft, units: [], availableUnits: [lieutenant] });
+  api.addRosterUnit.mockResolvedValue({
+    roster: { ...draft, totalCost: 70, remainingDucats: 630, unitCount: 1, unitIssues: [] },
+    units: [{ ...lieutenant, id: 18 }], availableUnits: [lieutenant],
+  });
+  await ready(); await open();
+  expect(screen.getByRole('list', { name: 'Roster issues' }).textContent).toContain('Add a Lieutenant.');
+  fireEvent.click(await screen.findByRole('button', { name: 'Add Lieutenant' }));
+  await screen.findByText('70 / 700 ducats');
+  expect(screen.queryByRole('list', { name: 'Roster issues' })).toBeNull();
 });

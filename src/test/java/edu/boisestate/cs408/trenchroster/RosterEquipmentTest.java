@@ -114,7 +114,10 @@ class RosterEquipmentTest {
             assertEquals(400,put(c,r,d,"Submachine Gun",1).statusCode());
             assertFalse(find(ok(c.get(path(r,d))).get("availableEquipment"),"Submachine Gun").get("compatible").asBoolean());
             ok(put(c,r,a,"Submachine Gun",0));ok(put(c,r,d,"Submachine Gun",1));
-            long l=add(c,r,"Lieutenant"),l2=add(c,r,"Lieutenant"),h=add(c,r,"Mechanized Heavy Infantry");
+            long l=add(c,r,"Lieutenant"),h=add(c,r,"Mechanized Heavy Infantry");
+            // An older roster can still contain a duplicate Lieutenant.
+            jdbc.update("INSERT INTO roster_units (roster_id, unit_id) SELECT roster_id, unit_id FROM roster_units WHERE id=?",l);
+            long l2=jdbc.queryForObject("SELECT MAX(id) FROM roster_units WHERE roster_id=?",Long.class,r);
             ok(put(c,r,l,"Machine Armour",1));ok(put(c,r,h,"Machine Armour",1));
             assertEquals(400,put(c,r,l2,"Machine Armour",1).statusCode());
             assertEquals(50,find(ok(c.get(path(r,l))).get("equipment"),"Machine Armour").get("purchaseCost").asInt());

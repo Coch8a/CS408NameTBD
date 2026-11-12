@@ -153,6 +153,7 @@ button:disabled:hover { background: var(--green); }
 .roster-costs { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--border); }
 .roster-costs span { color: var(--muted); }
 .roster-costs .budget-warning { color: #efbc77; }
+.roster-issues { margin: 0 0 8px; padding-left: 20px; color: var(--muted); font-size: 13px; }
 .equipment-panel { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 12px; }
 .equipment-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .equipment-heading h5 { margin: 0; }
