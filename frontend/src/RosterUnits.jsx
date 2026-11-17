@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { addRosterUnit, getRosterUnits, removeRosterUnit, setTrenchMole } from './rosterApi.js';
+import { sortRosterUnits } from './rosterOrder.js';
 import RosterUnitDetails, { recruitmentPrice } from './RosterUnitDetails.jsx';
 
 export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, onSessionExpired }) {
   const [view, setView] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
+  const savedUnits = sortRosterUnits(view?.units ?? []);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState(false);
   const [equipmentBusy, setEquipmentBusy] = useState(false);
@@ -39,8 +41,9 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           if (added) return added.id;
         }
         if (result.units.some(unit => unit.id === current)) return current;
-        const previousIndex = view?.units.findIndex(unit => unit.id === current) ?? 0;
-        return result.units[Math.max(0, Math.min(previousIndex, result.units.length - 1))]?.id ?? null;
+        const previousIndex = savedUnits.findIndex(unit => unit.id === current);
+        const next = sortRosterUnits(result.units);
+        return next[Math.max(0, Math.min(previousIndex, next.length - 1))]?.id ?? null;
       });
       callbacks.current.onRosterUpdated(result.roster);
       setNotice(message);
@@ -73,8 +76,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
 
   const needle = query.trim().toLowerCase();
   const available = (view?.availableUnits ?? []).filter(unit => `${unit.name} ${unit.type}`.toLowerCase().includes(needle));
-  const selectedIndex = view?.units.findIndex(unit => unit.id === selectedId) ?? -1;
-  const selectedUnit = view?.units[selectedIndex];
+  const selectedUnit = savedUnits.find(unit => unit.id === selectedId);
 
   return <section className="roster-units" aria-labelledby="roster-units-heading">
     <div className="unit-section-heading"><h4 id="roster-units-heading">Units</h4>
@@ -85,9 +87,9 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
     {view && <>
       <div className="unit-columns">
         <section className="saved-unit-panel" aria-labelledby="saved-units-heading">
-          <h5 id="saved-units-heading">Roster units ({view.units.length})</h5>
-          {!view.units.length && <p className="unit-empty">No units added.</p>}
-          <ul className="unit-list saved-unit-list">{view.units.map((unit, index) => <li key={unit.id}>
+          <h5 id="saved-units-heading">Roster units ({savedUnits.length})</h5>
+          {!savedUnits.length && <p className="unit-empty">No units added.</p>}
+          <ul className="unit-list saved-unit-list">{savedUnits.map((unit, index) => <li key={unit.id}>
             <button type="button" className="unit-select" aria-pressed={unit.id === selectedId}
               aria-label={`Select ${unit.name} ${index + 1}`} disabled={working} onClick={() => setSelectedId(unit.id)}>
               <strong>{unit.trenchMole ? "Trench Mole" : unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}</span>

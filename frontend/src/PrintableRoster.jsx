@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { rosterSnapshot } from './rosterTransfer.js';
+import { sortRosterUnits } from './rosterOrder.js';
 
 export default function PrintableRoster({ id }) {
   const [roster, setRoster] = useState(null);
@@ -18,6 +19,10 @@ export default function PrintableRoster({ id }) {
     return () => controller.abort();
   }, [id]);
 
+  const units = roster ? sortRosterUnits(roster.file.units.map((unit, index) => ({
+    unit, index, detail: roster.unitDetails[index],
+  })), row => row.detail.type) : [];
+
   return <main className="print-roster">
     <div className="print-controls">
       <a href="/">Back to roster builder</a>
@@ -30,9 +35,9 @@ export default function PrintableRoster({ id }) {
       <p>{roster.factionName} · {roster.totalCost} / {roster.file.ducatLimit} ducats</p>
       {roster.overBudget > 0 && <p>{roster.overBudget} ducats over budget.</p>}
       {roster.unitIssues.map(issue => <p key={issue}>{issue}</p>)}
-      {roster.file.units.length === 0 && <p>No units added.</p>}
-      {roster.file.units.map((unit, index) => <section key={index} className="print-unit">
-        <h2>{unit.trenchMole ? "Trench Mole (Yeoman)" : unit.name} · {roster.unitDetails[index].totalCost} ducats</h2>
+      {units.length === 0 && <p>No units added.</p>}
+      {units.map(({ unit, index, detail }) => <section key={index} className="print-unit">
+        <h2>{unit.trenchMole ? "Trench Mole (Yeoman)" : unit.name} · {detail.totalCost} ducats</h2>
         {unit.equipment.length > 0 && <ul>{unit.equipment.map(item =>
           <li key={item.name}>{item.quantity} × {item.name}</li>)}</ul>}
       </section>)}

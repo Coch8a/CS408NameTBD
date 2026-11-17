@@ -45,6 +45,26 @@ describe('Roster unit selection', () => {
     expect(screen.getByText('No units match your search.')).toBeTruthy();
   });
 
+  it('groups saved units by role and selects the next visible unit after removal', async () => {
+    const mercenary = { id: 42, name: 'Hired Scout', type: 'Mercenary' };
+    const priest = { id: 43, name: 'Sniper Priest', type: 'Elite' };
+    const leader = { id: 44, name: 'Lieutenant', type: 'Leader' };
+    const mixed = [first, mercenary, priest, second, leader];
+    api.getRosterUnits.mockResolvedValue(result(mixed));
+    api.removeRosterUnit.mockResolvedValue(result([first, mercenary, second, leader]));
+    await ready();
+
+    const list = within(screen.getByRole('region', { name: 'Roster units (5)' }));
+    expect(list.getAllByRole('button', { name: /^Select/ }).map(button => button.getAttribute('aria-label'))).toEqual([
+      'Select Lieutenant 1', 'Select Sniper Priest 2', 'Select Yeoman 3', 'Select Yeoman 4', 'Select Hired Scout 5',
+    ]);
+    fireEvent.click(list.getByRole('button', { name: 'Select Sniper Priest 2' }));
+    fireEvent.click(list.getByRole('button', { name: 'Remove Sniper Priest 2' }));
+    await screen.findByRole('region', { name: 'Roster units (4)' });
+    expect(api.removeRosterUnit).toHaveBeenCalledWith(12, 43, expect.any(AbortSignal));
+    expect(screen.getByRole('button', { name: 'Select Yeoman 2' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('adds the same type twice and removes only the requested individual', async () => {
     api.addRosterUnit.mockResolvedValueOnce(result([first])).mockResolvedValueOnce(result([first, second]));
     api.removeRosterUnit.mockResolvedValue(result([second]));
