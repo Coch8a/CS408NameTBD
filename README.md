@@ -44,7 +44,7 @@ The catalogue includes selected New Antioch units and equipment with search, equ
 - The public catalogue supports case-insensitive name search and combined filters for type, maximum cost, and unit equipment eligibility.
 - Tests cover required units, unit caps, ducat limits, combined filters, and empty results.
 
-### Checkpoint 6: Roster sharing and New Antioch
+### Checkpoint 6 — Roster sharing and New Antioch
 
 - Added validated JSON import and export, Compendium text export for Tabletop Simulator, and a printable roster that can be saved as a PDF.
 - Completed the base New Antioch roster: 8 units and 41 armoury items, including the Trench Mole upgrade, starting gear, and equipment restrictions.
