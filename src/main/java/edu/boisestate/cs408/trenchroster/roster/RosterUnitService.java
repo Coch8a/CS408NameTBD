@@ -33,6 +33,16 @@ public class RosterUnitService {
     @Transactional
     public UnitView add(long ownerId, long rosterId, long unitId) {
         long factionId = rosters.lock(ownerId, rosterId);
+        long entryId = insert(rosterId, factionId, unitId);
+        jdbc.update("""
+                INSERT INTO roster_equipment (roster_unit_id,equipment_id,quantity)
+                SELECT ?,equipment_id,1 FROM unit_equipment_rules WHERE unit_id=? AND default_selected=TRUE
+                """, entryId, unitId);
+        touch(ownerId, rosterId);
+        return snapshot(ownerId, rosterId);
+    }
+
+    long insert(long rosterId, long factionId, long unitId) {
         validation.checkAdd(rosterId, factionId, unitId);
         var key = new GeneratedKeyHolder();
         jdbc.update(connection -> {
@@ -42,12 +52,7 @@ public class RosterUnitService {
             statement.setLong(2, unitId);
             return statement;
         }, key);
-        jdbc.update("""
-                INSERT INTO roster_equipment (roster_unit_id,equipment_id,quantity)
-                SELECT ?,equipment_id,1 FROM unit_equipment_rules WHERE unit_id=? AND default_selected=TRUE
-                """, key.getKey().longValue(), unitId);
-        touch(ownerId, rosterId);
-        return snapshot(ownerId, rosterId);
+        return key.getKey().longValue();
     }
 
     @Transactional

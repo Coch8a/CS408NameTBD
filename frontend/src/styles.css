@@ -88,7 +88,7 @@ button:disabled, fieldset:disabled input { opacity: .65; cursor: default; }
 button:disabled:hover { background: var(--green); }
 
 /* Saved roster workspace: compact list on the left, settings on the right. */
-.roster-toolbar { display: flex; align-items: flex-end; gap: 10px; padding: 12px; border-bottom: 1px solid var(--border); }
+.roster-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px; border-bottom: 1px solid var(--border); }
 .roster-toolbar label { display: flex; flex-direction: column; gap: 5px; flex: 1; font-size: 12px; }
 .roster-workspace { display: grid; grid-template-columns: minmax(220px, 31%) minmax(0, 1fr); min-height: 220px; }
 .roster-list { border-right: 1px solid var(--border); background: #222623; }
@@ -182,3 +182,16 @@ button:disabled:hover { background: var(--green); }
 .catalog-profile { width: 40%; }
 .catalog-profile .profile-details { margin-top: 0; }
 .armour-rules { margin: 6px 0 10px; }
+
+.print-roster { max-width: 800px; margin: 0 auto; overflow-wrap: anywhere; }
+.print-controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+.print-unit { margin-top: 14px; }
+.print-unit h2 { font-size: 1.15rem; }
+@media print {
+  @page { margin: 15mm; }
+  body:has(.print-roster) { background: white; color: black; min-width: 0; }
+  .print-roster { max-width: none; color: black; padding: 0; }
+  .print-controls { display: none; }
+  .print-unit { break-inside: avoid; }
+  .print-unit h2 { break-after: avoid; }
+}

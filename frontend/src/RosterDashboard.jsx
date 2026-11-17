@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import RosterUnits from './RosterUnits.jsx';
+import { compendiumText } from './compendiumExport.js';
+import { downloadRoster, importRoster, rosterSnapshot } from './rosterTransfer.js';
 import { createRoster, deleteRoster, getRoster, listRosterFactions, listRosters, updateRoster } from './rosterApi.js';
 
 const emptyFields = { rosterName: '', factionId: '', ducatLimit: '700' };
@@ -144,6 +146,30 @@ export default function RosterDashboard({ onSessionExpired }) {
     });
   }
 
+  function upload(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    perform(async signal => {
+      const roster = await importRoster(file, signal);
+      if (signal.aborted) return;
+      setRosters(current => ordered([roster, ...current]));
+      setSelected(roster);
+      setMode('view');
+      setNotice('Roster imported.');
+    }, null);
+  }
+
+  function exportFile(compendium = false) {
+    perform(async signal => {
+      const snapshot = await rosterSnapshot(selected.id, signal);
+      if (signal.aborted) return;
+      const { file } = snapshot;
+      if (compendium) downloadRoster(file.name + '-compendium', compendiumText(snapshot), 'txt');
+      else downloadRoster(file.name, JSON.stringify(file, null, 2) + '\n');
+    });
+  }
+
   function remove() {
     perform(async signal => {
       await deleteRoster(selected.id, signal);
@@ -167,6 +193,7 @@ export default function RosterDashboard({ onSessionExpired }) {
     <div className="roster-toolbar">
       <label>Search saved rosters<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Roster name or faction" /></label>
       <button type="button" disabled={working || !loaded || !factions.length || mode !== 'view'} onClick={() => begin('create')}>New roster</button>
+      <label>Import JSON<input type="file" accept=".json,application/json" disabled={working || mode !== 'view'} onChange={upload} /></label>
       <button type="button" disabled={working || mode !== 'view'} onClick={load}>Refresh rosters</button>
     </div>
     {busy && <p className="roster-feedback" role="status">{editing ? 'Saving roster…' : mode === 'delete' ? 'Deleting roster…' : 'Loading rosters…'}</p>}
@@ -230,6 +257,9 @@ export default function RosterDashboard({ onSessionExpired }) {
             <div className="roster-actions"><button type="button" className="danger-button" disabled={working} onClick={remove}>Confirm delete</button>
               <button type="button" disabled={working} autoFocus onClick={() => { setMode('view'); setError(''); }}>Keep roster</button></div>
           </div> : <div className="roster-actions"><button type="button" disabled={working} onClick={() => begin('edit')}>Edit settings</button>
+            <button type="button" disabled={working} onClick={() => exportFile()}>Export JSON</button>
+            <button type="button" disabled={working || !selected.unitCount} onClick={() => exportFile(true)}>Export Compendium text</button>
+            <a href={`/?printRoster=${selected.id}`} target="_blank" rel="noopener">Print roster</a>
             <button type="button" className="danger-button" disabled={working} onClick={() => { setMode('delete'); setError(''); setNotice(''); }}>Delete roster</button></div>}
 
         </> : <p className="empty-message">Select or create a roster.</p>}

@@ -55,6 +55,16 @@ public class RosterEquipmentService {
         return snapshot(ownerId, rosters.get(ownerId, rosterId), unit);
     }
 
+    void replaceImported(long rosterId, long entryId, Map<Long, Integer> loadout) {
+        var unit = unit(rosterId, entryId);
+        String problem = validate(unit, loadout, rules(unit), usage(rosterId, entryId));
+        if (!problem.isEmpty()) invalid(problem);
+        for (var item : loadout.entrySet()) {
+            jdbc.update("INSERT INTO roster_equipment (roster_unit_id,equipment_id,quantity) VALUES (?,?,?)",
+                    entryId, item.getKey(), item.getValue());
+        }
+    }
+
     private EquipmentView snapshot(long ownerId, RosterService.Roster roster, Unit unit) {
         var rules = rules(unit);
         var selected = quantities(unit.entryId());
