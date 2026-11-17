@@ -58,7 +58,7 @@ describe('New Antioch catalogue', () => {
   it('combines equipment filters without hiding units', async () => {
     await renderCatalogue(catalog, { ...catalog, equipment: [catalog.equipment[2]] });
     fireEvent.change(screen.getByRole('combobox', { name: 'Equipment category' }), { target: { value: 'Equipment' } });
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'Max equipment cost' }), { target: { value: '5' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Max equipment cost (ducats)' }), { target: { value: '5' } });
     await screen.findByRole('row', { name: /Combat Helmet/ });
     expect(params()).toEqual({ faction: 'new-antioch', equipmentType: 'Equipment', equipmentMaxCost: '5' });
     expect(equipmentTable().queryByRole('row', { name: /Pistol/ })).toBeNull();

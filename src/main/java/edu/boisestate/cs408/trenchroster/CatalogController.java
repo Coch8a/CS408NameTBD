@@ -63,18 +63,18 @@ public class CatalogController {
                     unitArgs.toArray());
 
             var equipmentSql = new StringBuilder("""
-                    SELECT e.id, e.name, e.cost, e.equipment_type, e.cost_notes
+                    SELECT e.id, e.name, e.cost, e.currency, e.equipment_type, e.cost_notes
                     FROM equipment e JOIN factions f ON f.id = e.faction_id
                     WHERE f.slug = 'new-antioch' AND f.slug = ?
                     """);
             var equipmentArgs = new ArrayList<Object>(List.of(slug));
             filter(equipmentSql, equipmentArgs, "POSITION(? IN LOWER(e.name)) > 0", name.isEmpty() ? null : name);
             filter(equipmentSql, equipmentArgs, "e.equipment_type = ?", equipmentType.isBlank() ? null : equipmentType.strip());
-            filter(equipmentSql, equipmentArgs, "e.cost <= ?", equipmentMaxCost);
+            filter(equipmentSql, equipmentArgs, "e.currency = 'ducats' AND e.cost <= ?", equipmentMaxCost);
             equipmentSql.append(alphabetical ? " ORDER BY LOWER(e.name), e.id" : " ORDER BY e.id").append(" LIMIT 200");
             List<Map<String, Object>> equipment = jdbc.query(equipmentSql.toString(),
                     (row, index) -> Map.of("id", row.getLong("id"), "name", row.getString("name"),
-                            "cost", row.getInt("cost"), "type", row.getString("equipment_type"),
+                            "cost", row.getInt("cost"), "currency", row.getString("currency"), "type", row.getString("equipment_type"),
                             "notes", row.getString("cost_notes")),
                     equipmentArgs.toArray());
             return ResponseEntity.ok(Map.of("sampleData", false, "rulesVersion", "1.0.2",

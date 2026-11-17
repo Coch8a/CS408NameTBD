@@ -169,6 +169,40 @@ class RosterEquipmentTest {
             assertEquals(400,put(c,r,v,"Pistol",3).statusCode());
         }
     }
+    @Test void expandedArmouryEnforcesConditionalKitAndKeepsGloryOutOfDucatCosts() throws Exception {
+        try (var client = new AuthTestClient(port)) {
+            signIn(client, "a");
+            long r = roster(client), elite = add(client,r,"Lieutenant"), troop = add(client,r,"Yeoman");
+            long heavy = add(client,r,"Mechanized Heavy Infantry");
+            assertEquals(400, put(client,r,troop,"Automatic Pistol",1).statusCode());
+            ok(put(client,r,elite,"Automatic Pistol",1));
+            ok(put(client,r,elite,"Musical Instrument",1));
+            assertEquals(400, put(client,r,elite,"Trench Knife",1).statusCode());
+            var shrine = find(ok(client.get(path(r,elite))).path("availableEquipment"), "Field Shrine");
+            assertEquals("glory", shrine.path("currency").asString());
+            assertEquals(400, put(client,r,elite,"Field Shrine",1).statusCode());
+
+            ok(put(client,r,troop,"Grenade Launcher",1));
+            assertEquals(400, put(client,r,troop,"Satchel Charge",1).statusCode());
+            ok(put(client,r,troop,"Frag Grenades",1));
+            assertEquals(400, put(client,r,troop,"Incendiary Grenades",1).statusCode());
+            assertEquals(400, put(client,r,heavy,"Heavy Ballistic Shield",1).statusCode());
+            ok(put(client,r,heavy,"Machine Armour",1));
+            var shielded = ok(put(client,r,heavy,"Heavy Ballistic Shield",1));
+            assertEquals(110, shielded.path("unitCost").path("totalCost").asInt());
+            assertEquals(400, put(client,r,heavy,"Reinforced Armour",1).statusCode());
+            ok(put(client,r,heavy,"Heavy Shotgun",1));
+            assertEquals(400, put(client,r,heavy,"Trench Shield",1).statusCode());
+
+            var rejected = client.postJsonRaw("/api/rosters/import", """
+                    {"version":1,"name":"Invalid shield","faction":"new-antioch","ducatLimit":700,"units":[
+                       {"name":"Lieutenant","equipment":[{"name":"Heavy Ballistic Shield","quantity":1}]}]}
+                    """);
+            assertEquals(400, rejected.statusCode(), rejected.body());
+            assertTrue(rejected.body().contains("requires Machine Armour"));
+        }
+    }
+
     @Test void warbandLimitsAndHeavyArmourExemptionAreEnforced() throws Exception {
         try(var c=new AuthTestClient(port)) {
             signIn(c,"a");long r=roster(c),a=add(c,r,"Yeoman"),b=add(c,r,"Yeoman"),d=add(c,r,"Yeoman");

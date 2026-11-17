@@ -86,7 +86,7 @@ public class RosterEquipmentService {
             String decreaseReason = quantity == 0 ? "Not equipped." : validate(unit,
                     changed(selected, rules, rule.id(), quantity - 1), rules, usage);
             return new Option(rule.id(), rule.name(), rule.type(), rule.catalogueCost(), rule.purchaseCost(),
-                    quantity, rule.max(), rule.included(), rule.fixed(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
+                    quantity, rule.max(), rule.currency(), rule.included(), rule.fixed(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
         }).toList();
         return new EquipmentView(roster, unit.entryId(), unit.requiresArmour(),
                 costs.units(ownerId, roster.id()).get(unit.entryId()), equipped, available,
@@ -95,10 +95,11 @@ public class RosterEquipmentService {
 
     private Unit unit(long rosterId, long entryId) {
         var rows = jdbc.query("""
-                SELECT ru.id,ru.unit_id,u.faction_id,u.requires_armour
+                SELECT ru.id,ru.unit_id,u.faction_id,u.requires_armour,
+                       EXISTS (SELECT 1 FROM unit_profile_rules p WHERE p.unit_id=u.id AND p.rule_code='strong') AS strong
                 FROM roster_units ru JOIN units u ON u.id=ru.unit_id WHERE ru.id=? AND ru.roster_id=?
                 """, (row, index) -> new Unit(row.getLong("id"), row.getLong("unit_id"),
-                row.getLong("faction_id"), row.getBoolean("requires_armour")), entryId, rosterId);
+                row.getLong("faction_id"), row.getBoolean("requires_armour"), row.getBoolean("strong")), entryId, rosterId);
         if (rows.isEmpty()) throw new RosterUnitService.MissingRosterUnit();
         return rows.getFirst();
     }
@@ -114,8 +115,9 @@ public class RosterEquipmentService {
                 """, (row, index) -> new Rule(row.getLong("id"), row.getString("name"),
                 row.getString("equipment_type"), row.getInt("cost"), row.getInt("purchase_cost"),
                 row.getInt("max_per_model"), row.getInt("warband_limit"), row.getInt("hands"),
-                row.getString("slot"), row.getBoolean("bayonet_lug"), row.getBoolean("requires_lug"),
+                row.getString("slot"), row.getString("currency"), row.getBoolean("bayonet_lug"), row.getBoolean("requires_lug"),
                 row.getBoolean("shield_combo"), row.getBoolean("heavy"), row.getBoolean("blocks_trench_shield"),
+                row.getBoolean("requires_machine_armour"), row.getBoolean("cumbersome"),
                 row.getObject("allowed_unit") != null, row.getBoolean("included"), row.getBoolean("limit_exempt"), row.getBoolean("fixed_loadout")),
                 unit.unitId(), unit.factionId());
         var result = new LinkedHashMap<Long, Rule>();
@@ -161,38 +163,59 @@ public class RosterEquipmentService {
         for (var entry : selected.entrySet()) {
             var rule = rules.get(entry.getKey());
             if (rule == null || !rule.allowed()) return "This equipment is not available for this unit.";
+            if (rule.currency().equals("glory")) return "Glory spending is not enabled yet.";
             if (entry.getValue() < 1 || entry.getValue() > rule.max()) return rule.name() + ": maximum " + rule.max() + " per unit.";
             if (rule.limit() > 0 && !rule.limitExempt()
                     && usage.getOrDefault(rule.id(), 0) + entry.getValue() > rule.limit()) {
                 return rule.name() + ": warband limit " + rule.limit() + ".";
             }
         }
-        for (String slot : List.of("armour", "shield", "headgear")) {
+        for (String slot : List.of("armour", "shield", "headgear", "grenade")) {
             int count = count(selected, rules, rule -> rule.slot().equals(slot));
-            if (count > 1) return "Choose one " + slot + " item.";
+            if (count > 1) return slot.equals("grenade") ? "Choose one type of grenade." : "Choose one " + slot + " item.";
             if (slot.equals("armour") && unit.requiresArmour() && count != 1) return "This unit requires its included armour.";
         }
         if (count(selected, rules, Rule::requiresLug) > 0 && count(selected, rules, Rule::lug) == 0) {
             return "A Bayonet requires a weapon with a bayonet lug.";
         }
         boolean shield = count(selected, rules, rule -> rule.slot().equals("shield")) > 0;
-        if (shield && count(selected, rules, Rule::blocksShield) > 0) return "Machine Armour cannot be combined with a Trench Shield.";
+        boolean machineArmour = count(selected, rules, Rule::blocksTrenchShield) > 0;
+        if (machineArmour && count(selected, rules, rule -> rule.name().equals("Trench Shield")) > 0) {
+            return "Machine Armour cannot be combined with a Trench Shield.";
+        }
+        if (!machineArmour && count(selected, rules, Rule::requiresMachineArmour) > 0) {
+            return "Heavy Ballistic Shield requires Machine Armour.";
+        }
+        int held = count(selected, rules, rule -> rule.slot().equals("held"));
+        int heldCapacity = 2 - held - (shield ? 1 : 0);
+        if (held > 0 && heldCapacity < 0) return "HELD gear and shields need a free hand.";
+        int handsWithHeld = 0;
         for (String type : List.of("Ranged weapon", "Melee weapon")) {
             int hands = 0;
             int weapons = 0;
+            boolean canUseStrong = unit.strong() && type.equals("Melee weapon");
             for (var entry : selected.entrySet()) {
                 var rule = rules.get(entry.getKey());
                 if (!rule.type().equals(type)) continue;
-                hands += rule.hands() * entry.getValue();
+                int weaponHands = rule.hands();
+                int totalHands = weaponHands * entry.getValue();
+                if (canUseStrong && weaponHands == 2 && !rule.cumbersome()) {
+                    weaponHands = 1;
+                    totalHands--;
+                    canUseStrong = false;
+                }
+                hands += totalHands;
                 weapons += entry.getValue();
-                if (shield && rule.hands() == 2 && (!rule.combo()
+                if (shield && weaponHands == 2 && (!rule.combo()
                         || count(selected, rules, r -> r.slot().equals("shield") && r.combo()) == 0)) {
                     return "This two-handed weapon cannot be combined with the shield.";
                 }
             }
+            handsWithHeld += hands;
             if (hands > 2 || (shield && weapons > 1)) return "Too many " + type.toLowerCase() + "s for this unit.";
         }
-        if (count(selected, rules, Rule::heavy) > 1) return "Choose one heavy weapon.";
+        if (held > 0 && handsWithHeld > heldCapacity) return "HELD gear leaves room for one one-handed weapon or a shield.";
+        if (count(selected, rules, Rule::heavy) > 1) return "Choose one HEAVY item.";
         return "";
     }
 
@@ -203,14 +226,14 @@ public class RosterEquipmentService {
 
     private void invalid(String message) { throw new RosterService.InvalidRoster(message, Map.of("equipment", message)); }
 
-    private record Unit(long entryId, long unitId, long factionId, boolean requiresArmour) {}
+    private record Unit(long entryId, long unitId, long factionId, boolean requiresArmour, boolean strong) {}
     private record Rule(long id, String name, String type, int catalogueCost, int purchaseCost, int max,
-                        int limit, int hands, String slot, boolean lug, boolean requiresLug, boolean combo,
-                        boolean heavy, boolean blocksShield, boolean allowed, boolean included, boolean limitExempt, boolean fixed) {}
+                        int limit, int hands, String slot, String currency, boolean lug, boolean requiresLug, boolean combo,
+                        boolean heavy, boolean blocksTrenchShield, boolean requiresMachineArmour, boolean cumbersome, boolean allowed, boolean included, boolean limitExempt, boolean fixed) {}
     public record Equipped(long id, String name, String type, int quantity, int catalogueCost,
                            int purchaseCost, boolean includedInRecruitment) {}
     public record Option(long id, String name, String type, int catalogueCost, int purchaseCost, int quantity,
-                         int maxQuantity, boolean includedInRecruitment, boolean fixedLoadout, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
+                         int maxQuantity, String currency, boolean includedInRecruitment, boolean fixedLoadout, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
     public record EquipmentView(RosterService.Roster roster, long rosterUnitId, boolean requiresArmour, RosterCostService.UnitCost unitCost,
                                 List<Equipped> equipment, List<Option> availableEquipment, ProfileService.UnitStats unitProfile) {}
 }

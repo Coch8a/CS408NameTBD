@@ -57,13 +57,18 @@ public class ProfileService {
                 SELECT ru.id,p.movement_inches,p.movement_type,p.ranged_dice,p.melee_dice,p.innate_armour,p.base_mm,
                        COALESCE(SUM(ep.armour_modifier*re.quantity),0) AS armour,
                        COALESCE(MAX(ep.minimum_base_mm),0) AS minimum_base_mm,MIN(ep.charge_bonus) AS charge_bonus,
-                       MAX(CASE WHEN e.heavy THEN 1 ELSE 0 END)>0 AS heavy,
+                       MAX(CASE WHEN e.heavy AND NOT (
+                           (e.equipment_type='Melee weapon' AND drill.rule_code IS NOT NULL)
+                           OR (e.name='Satchel Charge' AND demolition.rule_code IS NOT NULL)
+                       ) THEN 1 ELSE 0 END)>0 AS heavy,
                        EXISTS (SELECT 1 FROM unit_profile_rules link
                                WHERE link.unit_id=ru.unit_id AND link.rule_code='strong') AS strong
                 FROM roster_units ru JOIN rosters r ON r.id=ru.roster_id JOIN unit_profiles p ON p.unit_id=ru.unit_id
                 LEFT JOIN roster_equipment re ON re.roster_unit_id=ru.id
                 LEFT JOIN equipment e ON e.id=re.equipment_id
                 LEFT JOIN equipment_profiles ep ON ep.equipment_id=re.equipment_id
+                LEFT JOIN unit_profile_rules drill ON drill.unit_id=ru.unit_id AND drill.rule_code='assault-drill'
+                LEFT JOIN unit_profile_rules demolition ON demolition.unit_id=ru.unit_id AND demolition.rule_code='battlefield-demolition'
                 WHERE ru.roster_id=? AND r.user_id=? AND (?=0 OR ru.id=?)
                 GROUP BY ru.id,ru.unit_id,p.movement_inches,p.movement_type,p.ranged_dice,p.melee_dice,p.innate_armour,p.base_mm
                 """, (RowCallbackHandler) row -> result.put(row.getLong("id"), unitStats(row)), rosterId, ownerId, entryId, entryId);

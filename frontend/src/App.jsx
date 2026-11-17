@@ -91,7 +91,7 @@ export default function App() {
           <label>Max unit cost<input type="number" min="0" step="1" value={filters.unitMaxCost} onChange={event => change('unitMaxCost', event.target.value)}/></label>
           <label>Unit can equip<select value={filters.equipmentId} onChange={event => change('equipmentId', event.target.value)}><option value="">Any item</option>{(catalog?.equipment ?? []).map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Equipment category<select value={filters.equipmentType} onChange={event => change('equipmentType', event.target.value)}><option value="">All categories</option>{categories.map(type => <option key={type}>{type}</option>)}</select></label>
-          <label>Max equipment cost<input type="number" min="0" step="1" value={filters.equipmentMaxCost} onChange={event => change('equipmentMaxCost', event.target.value)}/></label>
+          <label>Max equipment cost (ducats)<input type="number" min="0" step="1" value={filters.equipmentMaxCost} onChange={event => change('equipmentMaxCost', event.target.value)}/></label>
           <label className="sort-control"><input type="checkbox" checked={filters.alphabetical} onChange={event => change('alphabetical', event.target.checked)}/>Sort alphabetically</label>
           <button type="button" onClick={() => setFilters(emptyFilters)}>Clear filters</button>
         </div>
@@ -112,8 +112,8 @@ export default function App() {
           <section className="catalog-panel" id="equipment" aria-labelledby="equipment-heading">
             <div className="panel-heading"><h2 id="equipment-heading">Weapons &amp; equipment</h2><span>{equipment.length} of {catalog.equipment.length}</span></div>
             <table><caption className="visually-hidden">Selected New Antioch armoury prices</caption>
-              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Ducats</th><th scope="col">Profile / rules</th></tr></thead>
-              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost}</td><td className="catalog-profile"><ProfileDetails kind="equipment" id={item.id} name={item.name} /></td></tr>)}</tbody>
+              <thead><tr><th scope="col">Item</th><th scope="col">Category</th><th scope="col" className="numeric">Cost</th><th scope="col">Profile / rules</th></tr></thead>
+              <tbody>{equipment.map(item => <tr key={item.id}><th scope="row">{item.name}</th><td>{item.type}</td><td className="numeric cost">{item.cost} {item.currency === 'glory' ? 'Glory' : 'ducats'}</td><td className="catalog-profile"><ProfileDetails kind="equipment" id={item.id} name={item.name} /></td></tr>)}</tbody>
             </table>
             {equipment.length === 0 && <p className="empty-message">No equipment matches your filters.</p>}
           </section>

@@ -56,7 +56,7 @@ class WebEndpointsTest {
         var result = AuthTestClient.JSON.readTree(response.body());
         assertEquals(1, result.get("units").size());
         assertEquals("Mechanized Heavy Infantry", result.get("units").get(0).get("name").asString());
-        assertEquals(18, result.get("equipment").size());
+        assertEquals(41, result.get("equipment").size());
 
         var eligible = get("/api/catalog?equipmentId=" + armour);
         assertEquals(200, eligible.statusCode(), eligible.body());
@@ -66,6 +66,21 @@ class WebEndpointsTest {
         assertEquals("Mechanized Heavy Infantry", units.get(1).get("name").asString());
         assertEquals("Sniper Priest", units.get(2).get("name").asString());
         assertEquals("Trench Cleric", units.get(3).get("name").asString());
+    }
+    @Test void armouryShowsGloryPricesWithoutIncludingThemInDucatFilters() throws Exception {
+        var response = get("/api/catalog?q=field+shrine");
+        assertEquals(200, response.statusCode(), response.body());
+        var item = AuthTestClient.JSON.readTree(response.body()).path("equipment").get(0);
+        assertEquals(2, item.path("cost").asInt());
+        assertEquals("glory", item.path("currency").asString());
+        var filtered = get("/api/catalog?q=field+shrine&equipmentMaxCost=2");
+        assertEquals(200, filtered.statusCode(), filtered.body());
+        assertTrue(AuthTestClient.JSON.readTree(filtered.body()).path("equipment").isEmpty());
+
+        long sniper = jdbc.queryForObject("SELECT id FROM equipment WHERE name='Sniper Rifle'", Long.class);
+        var profile = get("/api/catalog/equipment/" + sniper + "/profile");
+        assertEquals(200, profile.statusCode(), profile.body());
+        assertEquals(48, AuthTestClient.JSON.readTree(profile.body()).path("stats").path("rangeInches").asInt());
     }
     @Test void catalogueMatchesEquipmentNameWithoutCaseAndCombinesTypeAndCost() throws Exception {
         var response = get("/api/catalog?q=RIFlE&equipmentType=Ranged+weapon&equipmentMaxCost=10");
@@ -98,7 +113,7 @@ class WebEndpointsTest {
         assertEquals(95, jdbc.queryForObject("SELECT alternate_cost FROM units WHERE name='Mechanized Heavy Infantry'", Integer.class));
         assertEquals(30, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Submachine Gun'", Integer.class));
         assertEquals(50, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Machine Armour'", Integer.class));
-        assertEquals(18, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
+        assertEquals(41, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
     }
     @Test void schemaReportsEveryProposalTableWithoutUserData() throws Exception {
         var response = get("/api/checkpoint");

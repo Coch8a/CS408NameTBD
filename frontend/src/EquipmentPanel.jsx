@@ -3,7 +3,7 @@ import { getEquipment, setEquipment } from './equipmentApi.js';
 import ProfileDetails from './ProfileDetails.jsx';
 
 const label = type => ({
-  'Ranged weapon': 'Ranged weapons', 'Melee weapon': 'Melee weapons', Shield: 'Shields', Equipment: 'Gear',
+  'Ranged weapon': 'Ranged weapons', 'Melee weapon': 'Melee weapons', Shield: 'Shields', Equipment: 'Gear', Grenade: 'Grenades',
 }[type] || type);
 
 function EquipmentPicker({ type, items, busy, change }) {
@@ -15,7 +15,7 @@ function EquipmentPicker({ type, items, busy, change }) {
         <select value={item ? choice : ''} disabled={busy} onChange={event => setChoice(event.target.value)}>
           <option value="">Choose an item</option>
           {items.map(option => <option key={option.id} value={option.id}>
-            {option.name} · {option.purchaseCost} ducats
+            {option.name} · {option.purchaseCost} {option.currency === 'glory' ? 'Glory' : 'ducats'}
           </option>)}
         </select>
       </label>
