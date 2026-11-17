@@ -86,7 +86,7 @@ public class RosterEquipmentService {
             String decreaseReason = quantity == 0 ? "Not equipped." : validate(unit,
                     changed(selected, rules, rule.id(), quantity - 1), rules, usage);
             return new Option(rule.id(), rule.name(), rule.type(), rule.catalogueCost(), rule.purchaseCost(),
-                    quantity, rule.max(), rule.included(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
+                    quantity, rule.max(), rule.included(), rule.fixed(), reason.isEmpty(), reason, decreaseReason.isEmpty(), decreaseReason);
         }).toList();
         return new EquipmentView(roster, unit.entryId(), unit.requiresArmour(),
                 costs.units(ownerId, roster.id()).get(unit.entryId()), equipped, available,
@@ -107,7 +107,8 @@ public class RosterEquipmentService {
         var rows = jdbc.query("""
                 SELECT e.*,ur.unit_id AS allowed_unit,COALESCE(ur.cost_override,e.cost) AS purchase_cost,
                        COALESCE(ur.included_in_recruitment,FALSE) AS included,
-                       COALESCE(ur.limit_exempt,FALSE) AS limit_exempt
+                       COALESCE(ur.limit_exempt,FALSE) AS limit_exempt,
+                       COALESCE(ur.fixed_loadout,FALSE) AS fixed_loadout
                 FROM equipment e LEFT JOIN unit_equipment_rules ur ON ur.equipment_id=e.id AND ur.unit_id=?
                 WHERE e.faction_id=? ORDER BY e.equipment_type,e.name,e.id
                 """, (row, index) -> new Rule(row.getLong("id"), row.getString("name"),
@@ -115,7 +116,7 @@ public class RosterEquipmentService {
                 row.getInt("max_per_model"), row.getInt("warband_limit"), row.getInt("hands"),
                 row.getString("slot"), row.getBoolean("bayonet_lug"), row.getBoolean("requires_lug"),
                 row.getBoolean("shield_combo"), row.getBoolean("heavy"), row.getBoolean("blocks_trench_shield"),
-                row.getObject("allowed_unit") != null, row.getBoolean("included"), row.getBoolean("limit_exempt")),
+                row.getObject("allowed_unit") != null, row.getBoolean("included"), row.getBoolean("limit_exempt"), row.getBoolean("fixed_loadout")),
                 unit.unitId(), unit.factionId());
         var result = new LinkedHashMap<Long, Rule>();
         rows.forEach(rule -> result.put(rule.id(), rule));
@@ -152,6 +153,11 @@ public class RosterEquipmentService {
     }
 
     private String validate(Unit unit, Map<Long, Integer> selected, Map<Long, Rule> rules, Map<Long, Integer> usage) {
+        for (var rule : rules.values()) {
+            if (rule.fixed() && selected.getOrDefault(rule.id(), 0) != 1) {
+                return rule.name() + " is part of this unit's fixed loadout.";
+            }
+        }
         for (var entry : selected.entrySet()) {
             var rule = rules.get(entry.getKey());
             if (rule == null || !rule.allowed()) return "This equipment is not available for this unit.";
@@ -200,11 +206,11 @@ public class RosterEquipmentService {
     private record Unit(long entryId, long unitId, long factionId, boolean requiresArmour) {}
     private record Rule(long id, String name, String type, int catalogueCost, int purchaseCost, int max,
                         int limit, int hands, String slot, boolean lug, boolean requiresLug, boolean combo,
-                        boolean heavy, boolean blocksShield, boolean allowed, boolean included, boolean limitExempt) {}
+                        boolean heavy, boolean blocksShield, boolean allowed, boolean included, boolean limitExempt, boolean fixed) {}
     public record Equipped(long id, String name, String type, int quantity, int catalogueCost,
                            int purchaseCost, boolean includedInRecruitment) {}
     public record Option(long id, String name, String type, int catalogueCost, int purchaseCost, int quantity,
-                         int maxQuantity, boolean includedInRecruitment, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
+                         int maxQuantity, boolean includedInRecruitment, boolean fixedLoadout, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
     public record EquipmentView(RosterService.Roster roster, long rosterUnitId, boolean requiresArmour, RosterCostService.UnitCost unitCost,
                                 List<Equipped> equipment, List<Option> availableEquipment, ProfileService.UnitStats unitProfile) {}
 }

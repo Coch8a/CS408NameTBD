@@ -14,6 +14,8 @@ public class RosterValidation {
             WHERE u.faction_id=?
             """;
     private static final String GROUP = " GROUP BY u.id, u.name, u.unit_minimum, u.unit_limit ORDER BY u.name, u.id";
+    private static final String TRENCH_MOLE_ISSUE =
+            "A third Trench Mole requires at least 1,000 ducats in other models and equipment.";
     private final JdbcTemplate jdbc;
 
     public RosterValidation(JdbcTemplate jdbc) { this.jdbc = jdbc; }
@@ -29,7 +31,28 @@ public class RosterValidation {
                 issues.add(rule.name() + ": " + rule.selected() + " selected (maximum " + rule.maximum() + ").");
             }
         }
+        String upgradeIssue = trenchMoleIssue(rosterId);
+        if (!upgradeIssue.isEmpty()) issues.add(upgradeIssue);
         return List.copyOf(issues);
+    }
+
+    void checkTrenchMoles(long rosterId) {
+        String issue = trenchMoleIssue(rosterId);
+        if (!issue.isEmpty()) throw new RosterService.InvalidRoster(issue, Map.of("trenchMole", issue));
+    }
+
+    private String trenchMoleIssue(long rosterId) {
+        long count = jdbc.queryForObject("SELECT COUNT(*) FROM roster_units WHERE roster_id=? AND trench_mole=TRUE",
+                Long.class, rosterId);
+        if (count <= 2) return "";
+        if (count > 3) return "A roster can have at most three Trench Moles.";
+        long otherModels = jdbc.queryForObject("""
+                SELECT SUM(c.recruitment_cost+c.equipment_cost) -
+                       MIN(CASE WHEN ru.trench_mole THEN c.recruitment_cost+c.equipment_cost END) FROM (
+                """ + RosterCostService.UNIT_COSTS + """
+                ) c JOIN roster_units ru ON ru.id=c.id WHERE c.roster_id=?
+                """, Long.class, rosterId);
+        return otherModels < 1_000 ? TRENCH_MOLE_ISSUE : "";
     }
 
     void checkAdd(long rosterId, long factionId, long unitId) {

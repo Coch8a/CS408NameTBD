@@ -1,5 +1,6 @@
 package edu.boisestate.cs408.trenchroster.roster;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -19,13 +20,15 @@ public class RosterTransferService {
     private final RosterService rosters;
     private final RosterUnitService units;
     private final RosterEquipmentService equipment;
+    private final RosterValidation validation;
 
     public RosterTransferService(JdbcTemplate jdbc, RosterService rosters, RosterUnitService units,
-                                 RosterEquipmentService equipment) {
+                                 RosterEquipmentService equipment, RosterValidation validation) {
         this.jdbc = jdbc;
         this.rosters = rosters;
         this.units = units;
         this.equipment = equipment;
+        this.validation = validation;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
@@ -47,7 +50,8 @@ public class RosterTransferService {
         }, id);
         String faction = jdbc.queryForObject("SELECT slug FROM factions WHERE id=?", String.class, roster.factionId());
         var entries = view.units().stream()
-                .map(unit -> new Entry(unit.name(), List.copyOf(gear.getOrDefault(unit.id(), List.of())))).toList();
+                .map(unit -> new Entry(unit.name(), List.copyOf(gear.getOrDefault(unit.id(), List.of())),
+                        unit.trenchMole() ? Boolean.TRUE : null)).toList();
         var file = new RosterFile(1, roster.rosterName(), faction, roster.ducatLimit(), entries);
         return new Snapshot(file, roster.factionName(), roster.totalCost(), roster.overBudget(), roster.unitIssues(),
                 view.units().stream().map(unit -> new UnitDetail(unit.type(), unit.costs().totalCost(),
@@ -78,6 +82,10 @@ public class RosterTransferService {
             String label = "Unit " + ++index;
             String unit = name(entry.path("name"), label + " name");
             if (!unitIds.containsKey(unit)) throw invalid(label + ": unknown unit " + unit + ".");
+            var upgrade = entry.path("trenchMole");
+            if (!upgrade.isMissingNode() && !upgrade.isBoolean()) {
+                throw invalid(label + ": trenchMole must be true or false.");
+            }
             var loadout = new LinkedHashMap<Long, Integer>();
             for (var item : array(entry.path("equipment"), label + " equipment", 100)) {
                 String itemName = name(item.path("name"), label + " equipment name");
@@ -91,10 +99,12 @@ public class RosterTransferService {
             try {
                 long entryId = units.insert(roster.id(), factionId, unitIds.get(unit));
                 equipment.replaceImported(roster.id(), entryId, loadout);
+                if (upgrade.asBoolean(false)) units.applyTrenchMole(roster.id(), factionId, entryId, true);
             } catch (RosterService.InvalidRoster problem) {
                 throw invalid(label + " (" + unit + "): " + problem.getMessage());
             }
         }
+        validation.checkTrenchMoles(roster.id());
         return rosters.get(owner, roster.id());
     }
 
@@ -129,7 +139,8 @@ public class RosterTransferService {
     }
 
     public record Gear(String name, int quantity) {}
-    public record Entry(String name, List<Gear> equipment) {}
+    public record Entry(String name, List<Gear> equipment,
+                        @JsonInclude(JsonInclude.Include.NON_NULL) Boolean trenchMole) {}
     public record RosterFile(int version, String name, String faction, int ducatLimit, List<Entry> units) {}
     public record UnitDetail(String type, long totalCost, Map<String, Integer> prices) {}
     public record Snapshot(RosterFile file, String factionName, long totalCost, long overBudget,

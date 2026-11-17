@@ -32,7 +32,7 @@ export default function PrintableRoster({ id }) {
       {roster.unitIssues.map(issue => <p key={issue}>{issue}</p>)}
       {roster.file.units.length === 0 && <p>No units added.</p>}
       {roster.file.units.map((unit, index) => <section key={index} className="print-unit">
-        <h2>{unit.name} · {roster.unitDetails[index].totalCost} ducats</h2>
+        <h2>{unit.trenchMole ? "Trench Mole (Yeoman)" : unit.name} · {roster.unitDetails[index].totalCost} ducats</h2>
         {unit.equipment.length > 0 && <ul>{unit.equipment.map(item =>
           <li key={item.name}>{item.quantity} × {item.name}</li>)}</ul>}
       </section>)}

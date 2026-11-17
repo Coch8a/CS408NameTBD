@@ -59,6 +59,40 @@ class RosterTransferTest {
     }
 
     @Test
+    void expandedRosterTransfersIncludedGearAndUpgrades() throws Exception {
+        String name = username();
+        try (var client = new AuthTestClient(port)) {
+            login(client, name);
+            String expanded = """
+                    {"version":1,"name":"Expanded patrol","faction":"new-antioch","ducatLimit":700,"units":[
+                        {"name":"Lieutenant","equipment":[]},
+                        {"name":"Sniper Priest","equipment":[]},
+                        {"name":"Trench Cleric","equipment":[]},
+                        {"name":"Shock Trooper","equipment":[]},
+                        {"name":"Combat Engineer","equipment":[{"name":"Engineer Body Armour","quantity":1},{"name":"Shovel","quantity":1}]},
+                        {"name":"Combat Medic","equipment":[{"name":"Gas Mask","quantity":1},{"name":"Medi-kit","quantity":1},
+                            {"name":"Misericordia","quantity":1},{"name":"Standard Armour","quantity":1}]},
+                        {"name":"Yeoman","equipment":[],"trenchMole":true},
+                        {"name":"Mechanized Heavy Infantry","equipment":[{"name":"Reinforced Armour","quantity":1}]}
+                    ]}
+                    """;
+            var first = client.postJsonRaw(IMPORT, expanded);
+            assertEquals(201, first.statusCode(), first.body());
+            long id = AuthTestClient.JSON.readTree(first.body()).path("id").asLong();
+            var snapshot = AuthTestClient.JSON.readTree(client.get("/api/rosters/" + id + "/export").body());
+            assertEquals(495, snapshot.path("totalCost").asInt());
+            assertEquals(AuthTestClient.JSON.readTree(expanded), snapshot.path("file"));
+            var imported = client.postJson(IMPORT, snapshot.path("file"));
+            assertEquals(201, imported.statusCode(), imported.body());
+            long copy = AuthTestClient.JSON.readTree(imported.body()).path("id").asLong();
+            assertEquals(snapshot, AuthTestClient.JSON.readTree(client.get("/api/rosters/" + copy + "/export").body()));
+            assertEquals(400, client.postJsonRaw(IMPORT, expanded.replace(",{\"name\":\"Shovel\",\"quantity\":1}", "")).statusCode());
+            assertEquals(400, client.postJsonRaw(IMPORT, expanded.replace("\"name\":\"Yeoman\"", "\"name\":\"Trench Cleric\"")).statusCode());
+            assertEquals(2, AuthTestClient.JSON.readTree(client.get("/api/rosters").body()).size());
+        } finally { cleanup(name); }
+    }
+
+    @Test
     void invalidImportsLeaveNoPartialRoster() throws Exception {
         String name = username();
         try (var client = new AuthTestClient(port)) {

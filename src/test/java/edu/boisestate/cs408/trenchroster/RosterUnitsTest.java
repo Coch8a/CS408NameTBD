@@ -66,7 +66,7 @@ class RosterUnitsTest {
             var empty = client.get(path(id));
             assertEquals(200, empty.statusCode());
             assertEquals(0, json(empty).get("units").size());
-            assertEquals(3, json(empty).get("availableUnits").size());
+            assertEquals(8, json(empty).get("availableUnits").size());
             String previous = json(empty).get("roster").get("updatedAt").asString();
             long first = add(client, id, yeoman()).get("units").get(0).get("id").asLong();
             var two = add(client, id, yeoman());

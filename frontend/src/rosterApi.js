@@ -39,3 +39,5 @@ export const deleteRoster = (id, signal) => request(`/api/rosters/${id}`, 'DELET
 export const getRosterUnits = (id, signal) => request(`/api/rosters/${id}/units`, 'GET', undefined, signal);
 export const addRosterUnit = (id, unitId, signal) => request(`/api/rosters/${id}/units`, 'POST', { unitId }, signal);
 export const removeRosterUnit = (id, entryId, signal) => request(`/api/rosters/${id}/units/${entryId}`, 'DELETE', undefined, signal);
+export const setTrenchMole = (id, entryId, enabled, signal) =>
+  request(`/api/rosters/${id}/units/${entryId}/trench-mole`, 'PUT', { enabled }, signal);

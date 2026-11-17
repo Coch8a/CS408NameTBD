@@ -24,7 +24,7 @@ class CatalogUpgradeTest {
             assertEquals("migration@example.invalid", jdbc.queryForObject("SELECT email_normalized FROM users", String.class));
             assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM roster_equipment", Integer.class));
             assertEquals("Existing roster", jdbc.queryForObject("SELECT roster_name FROM rosters", String.class));
-            assertEquals(3, jdbc.queryForObject("SELECT COUNT(*) FROM units WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
+            assertEquals(8, jdbc.queryForObject("SELECT COUNT(*) FROM units WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
             assertThrows(org.springframework.dao.DuplicateKeyException.class, () -> jdbc.update(
                     "INSERT INTO users(username,email,password_hash,username_normalized,email_normalized) VALUES (?,?,?,?,?)",
                     "MIGRATION-TEST", "another@example.invalid", "test-only", "migration-test", "another@example.invalid"));

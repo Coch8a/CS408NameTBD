@@ -2,6 +2,7 @@ package edu.boisestate.cs408.trenchroster.roster;
 
 import java.security.Principal;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import edu.boisestate.cs408.trenchroster.auth.AccountDetailsService;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,15 @@ public class RosterUnitController {
         return ResponseEntity.status(201).cacheControl(CacheControl.noStore())
                 .body(units.add(owner(principal), rosterId, request.unitId()));
     }
+    @PutMapping("/{entryId}/trench-mole")
+    public ResponseEntity<RosterUnitService.UnitView> trenchMole(Principal principal, @PathVariable long rosterId,
+            @PathVariable long entryId, @Valid @RequestBody TrenchMoleRequest request) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(units.setTrenchMole(owner(principal), rosterId, entryId, request.enabled()));
+    }
+
+    public record TrenchMoleRequest(@NotNull Boolean enabled) {}
+
     @DeleteMapping("/{entryId}")
     public ResponseEntity<RosterUnitService.UnitView> remove(Principal principal, @PathVariable long rosterId,
                                                             @PathVariable long entryId) {

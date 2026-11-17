@@ -38,3 +38,23 @@ it('matches the archived Compendium export with elite and infantry entries, alia
   ].join('\n');
   expect(compendiumText({ file, totalCost: 212, unitDetails })).toBe(expected);
 });
+
+it('exports the new elites and the legacy Shocktrooper and Infiltrator names', () => {
+  const file = { name: 'Patrol', faction: 'new-antioch', ducatLimit: 700, units: [
+    { name: 'Shock Trooper', equipment: [] },
+    { name: 'Sniper Priest', equipment: [] },
+    { name: 'Trench Cleric', equipment: [] },
+    { name: 'Yeoman', trenchMole: true, equipment: [] },
+  ] };
+  const unitDetails = [
+    { type: 'Infantry', totalCost: 45 },
+    { type: 'Elite', totalCost: 50 },
+    { type: 'Elite', totalCost: 60 },
+    { type: 'Infantry', totalCost: 40 },
+  ];
+  const [elites, troops] = compendiumText({ file, totalCost: 195, unitDetails }).split('[ INFANTRY ]');
+  expect(elites).toContain('Sniper Priest | Sniper Priest | 50 ducats');
+  expect(elites).toContain('Trench Cleric | Trench Cleric | 60 ducats');
+  expect(troops).toContain('Shocktrooper | Shocktrooper | 45 ducats');
+  expect(troops).toMatch(/Yeoman \| Yeoman \| 40 ducats 0 glory -+\n\[ UPGRADES \]\n-Infiltrator \(10 ducats\)/);
+});

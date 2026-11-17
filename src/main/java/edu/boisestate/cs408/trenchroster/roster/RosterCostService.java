@@ -8,13 +8,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class RosterCostService {
     static final String UNIT_COSTS = """
-            SELECT ru.id,ru.roster_id,CAST(u.base_cost AS BIGINT)*ru.quantity AS recruitment_cost,
+            SELECT ru.id,ru.roster_id,(CAST(u.base_cost AS BIGINT) + CASE WHEN ru.trench_mole THEN 10 ELSE 0 END)*ru.quantity AS recruitment_cost,
                    COALESCE(SUM(CAST(COALESCE(rule.cost_override,e.cost) AS BIGINT)*re.quantity),0)*ru.quantity AS equipment_cost
             FROM roster_units ru JOIN units u ON u.id=ru.unit_id
             LEFT JOIN roster_equipment re ON re.roster_unit_id=ru.id
             LEFT JOIN equipment e ON e.id=re.equipment_id
             LEFT JOIN unit_equipment_rules rule ON rule.unit_id=u.id AND rule.equipment_id=e.id
-            GROUP BY ru.id,ru.roster_id,u.base_cost,ru.quantity
+            GROUP BY ru.id,ru.roster_id,u.base_cost,ru.quantity,ru.trench_mole
             """;
     private final JdbcTemplate jdbc;
 

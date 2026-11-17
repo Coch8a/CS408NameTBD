@@ -41,10 +41,10 @@ function EquippedLoadout({ equipment, options, busy, change }) {
           <div className="equipped-item">
             <strong>{item.name}</strong> <output aria-label={`${item.name} quantity`}>×{item.quantity}</output>
             <ProfileDetails kind="equipment" id={item.id} name={item.name} />
-            {item.type !== 'Armour' && option?.decreaseReason && !option.canDecrease &&
+            {item.type !== 'Armour' && !option?.fixedLoadout && option?.decreaseReason && !option.canDecrease &&
               <p className="equipment-reason">{option.decreaseReason}</p>}
           </div>
-          {item.type !== 'Armour' && <button type="button" disabled={busy || !option?.canDecrease}
+          {item.type !== 'Armour' && !option?.fixedLoadout && <button type="button" disabled={busy || !option?.canDecrease}
             aria-label={`Remove one ${item.name}`} onClick={() => change(item.id, item.quantity - 1)}>Remove</button>}
         </li>;
       })}
@@ -100,10 +100,10 @@ export default function EquipmentPanel({ rosterId, unitId, onUpdated, onBusyChan
   }, [rosterId, unitId]);
 
   const options = view?.availableEquipment ?? [];
-  const armour = options.filter(item => item.type === 'Armour');
+  const armour = options.filter(item => item.type === 'Armour' && !item.fixedLoadout);
   const groups = new Map();
   for (const item of options) {
-    if (item.type === 'Armour') continue;
+    if (item.type === 'Armour' || item.fixedLoadout) continue;
     if (!groups.has(item.type)) groups.set(item.type, []);
     groups.get(item.type).push(item);
   }

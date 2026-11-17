@@ -5,11 +5,16 @@ import ProfileDetails, { ProfileStats } from './ProfileDetails.jsx';
 export const recruitmentPrice = unit => unit.alternateCost > 0
   ? `${unit.cost} / ${unit.alternateCost}` : String(unit.cost);
 
-export default function RosterUnitDetails({ unit, rosterId, onUpdated, onBusyChange, onSessionExpired }) {
+export default function RosterUnitDetails({ unit, rosterId, onUpdated, onBusyChange, onSessionExpired, onTrenchMole, busy }) {
   return <section className="unit-detail-panel" aria-labelledby="unit-detail-heading">
     <h5 id="unit-detail-heading">Unit details</h5>
     {unit ? <>
-      <h6>{unit.name}</h6>
+      <h6>{unit.trenchMole ? 'Trench Mole' : unit.name}</h6>
+      {unit.name === 'Yeoman' && <label className="unit-feedback">
+        <input type="checkbox" checked={Boolean(unit.trenchMole)} disabled={busy}
+          onChange={event => onTrenchMole(event.target.checked)} /> Trench Mole (+10 ducats)
+      </label>}
+      {unit.trenchMole && <p className="unit-feedback">INFILTRATOR</p>}
       <dl className="unit-metadata">
         <div><dt>Role</dt><dd>{unit.type}</dd></div>
         <div><dt>Recruitment</dt><dd>{unit.costs?.recruitmentCost ?? recruitmentPrice(unit)} ducats</dd></div>

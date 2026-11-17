@@ -56,14 +56,16 @@ class WebEndpointsTest {
         var result = AuthTestClient.JSON.readTree(response.body());
         assertEquals(1, result.get("units").size());
         assertEquals("Mechanized Heavy Infantry", result.get("units").get(0).get("name").asString());
-        assertEquals(15, result.get("equipment").size());
+        assertEquals(18, result.get("equipment").size());
 
         var eligible = get("/api/catalog?equipmentId=" + armour);
         assertEquals(200, eligible.statusCode(), eligible.body());
         var units = AuthTestClient.JSON.readTree(eligible.body()).get("units");
-        assertEquals(2, units.size());
+        assertEquals(4, units.size());
         assertEquals("Lieutenant", units.get(0).get("name").asString());
         assertEquals("Mechanized Heavy Infantry", units.get(1).get("name").asString());
+        assertEquals("Sniper Priest", units.get(2).get("name").asString());
+        assertEquals("Trench Cleric", units.get(3).get("name").asString());
     }
     @Test void catalogueMatchesEquipmentNameWithoutCaseAndCombinesTypeAndCost() throws Exception {
         var response = get("/api/catalog?q=RIFlE&equipmentType=Ranged+weapon&equipmentMaxCost=10");
@@ -96,7 +98,7 @@ class WebEndpointsTest {
         assertEquals(95, jdbc.queryForObject("SELECT alternate_cost FROM units WHERE name='Mechanized Heavy Infantry'", Integer.class));
         assertEquals(30, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Submachine Gun'", Integer.class));
         assertEquals(50, jdbc.queryForObject("SELECT cost FROM equipment WHERE name='Machine Armour'", Integer.class));
-        assertEquals(15, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
+        assertEquals(18, jdbc.queryForObject("SELECT COUNT(*) FROM equipment WHERE faction_id IN (SELECT id FROM factions WHERE slug='new-antioch')", Integer.class));
     }
     @Test void schemaReportsEveryProposalTableWithoutUserData() throws Exception {
         var response = get("/api/checkpoint");

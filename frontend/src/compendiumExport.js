@@ -2,6 +2,7 @@ const legacyNames = {
   'Mechanized Heavy Infantry': 'Mechanised Heavy Infantry',
   'Bolt-Action Rifle': 'Bolt Action Rifle',
   'Medi-kit': 'Medi-Kit',
+  'Shock Trooper': 'Shocktrooper',
 };
 
 const legacyName = name => legacyNames[name] ?? name;
@@ -21,7 +22,7 @@ export function compendiumText({ file, totalCost, unitDetails }) {
     `[ GLORY ] ${totals(0, 0)}`,
   ];
   for (const [elite, heading] of [[true, '[ ELITE MEMBERS ]'], [false, '[ INFANTRY ]']]) {
-    const group = file.units.flatMap((unit, i) => (unitDetails[i].type === 'Leader') === elite ? [[unit, unitDetails[i]]] : []);
+    const group = file.units.flatMap((unit, i) => (['Leader', 'Elite'].includes(unitDetails[i].type)) === elite ? [[unit, unitDetails[i]]] : []);
     if (!group.length) continue;
     lines.push(heading);
     for (const [unit, detail] of group) {
@@ -29,8 +30,11 @@ export function compendiumText({ file, totalCost, unitDetails }) {
       const header = `${name} | ${name} | ${detail.totalCost} ducats 0 glory`;
       const gear = unit.equipment.flatMap(item =>
         Array.from({ length: item.quantity }, () => `-${legacyName(item.name)} (${detail.prices[item.name]} ducats)`));
-      const width = Math.max(header.length + 8, ...gear.map(row => row.length - 1));
+      const upgrades = unit.trenchMole ? ['-Infiltrator (10 ducats)'] : [];
+      const width = Math.max(header.length + 8, ...gear.map(row => row.length - 1),
+        ...upgrades.map(row => row.length - 1));
       lines.push(` ${header} ${'-'.repeat(Math.floor((width + width % 2 - header.length - 2) / 2))}`);
+      if (upgrades.length) lines.push('[ UPGRADES ]', ...upgrades);
       if (gear.length) lines.push('[ EQUIPMENT ]', ...gear);
       lines.push('');
     }

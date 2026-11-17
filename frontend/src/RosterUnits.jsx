@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { addRosterUnit, getRosterUnits, removeRosterUnit } from './rosterApi.js';
+import { addRosterUnit, getRosterUnits, removeRosterUnit, setTrenchMole } from './rosterApi.js';
 import RosterUnitDetails, { recruitmentPrice } from './RosterUnitDetails.jsx';
 
 export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, onSessionExpired }) {
@@ -90,13 +90,14 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           <ul className="unit-list saved-unit-list">{view.units.map((unit, index) => <li key={unit.id}>
             <button type="button" className="unit-select" aria-pressed={unit.id === selectedId}
               aria-label={`Select ${unit.name} ${index + 1}`} disabled={working} onClick={() => setSelectedId(unit.id)}>
-              <strong>{unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}</span>
+              <strong>{unit.trenchMole ? "Trench Mole" : unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}</span>
             </button>
             <button type="button" disabled={working} aria-label={`Remove ${unit.name} ${index + 1}`}
               onClick={() => perform(signal => removeRosterUnit(rosterId, unit.id, signal), `${unit.name} removed.`)}>Remove</button>
           </li>)}</ul>
         </section>
-        <RosterUnitDetails key={`${selectedUnit?.id}:${equipmentVersion}`} unit={selectedUnit} rosterId={rosterId}
+        <RosterUnitDetails key={`${selectedUnit?.id}:${equipmentVersion}`} unit={selectedUnit} rosterId={rosterId} busy={working}
+          onTrenchMole={enabled => perform(signal => setTrenchMole(rosterId, selectedId, enabled, signal))}
           onSessionExpired={onSessionExpired} onBusyChange={value => {
             equipmentBusyRef.current = value;
             setEquipmentBusy(value);

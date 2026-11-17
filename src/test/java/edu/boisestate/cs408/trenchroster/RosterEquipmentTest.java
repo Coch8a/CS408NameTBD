@@ -59,6 +59,68 @@ class RosterEquipmentTest {
         for(var value:list) if(value.get("name").asString().equals(name)) return value;
         throw new AssertionError(name);
     }
+    @Test void specialistsStartWithFixedGearAndCorrectTotals() throws Exception {
+        try (var c = new AuthTestClient(port)) {
+            signIn(c,"a");
+            long r = roster(c), engineer = add(c,r,"Combat Engineer"), medic = add(c,r,"Combat Medic");
+            var engineering = ok(c.get(path(r,engineer)));
+            var medical = ok(c.get(path(r,medic)));
+            assertEquals(80, engineering.path("unitCost").path("totalCost").asInt());
+            assertEquals(65, medical.path("unitCost").path("totalCost").asInt());
+            assertEquals(-2, engineering.path("unitProfile").path("armourModifier").asInt());
+            assertEquals(-1, medical.path("unitProfile").path("armourModifier").asInt());
+            assertEquals(2, engineering.path("equipment").size());
+            assertEquals(4, medical.path("equipment").size());
+            for (String gear : new String[]{"Engineer Body Armour","Shovel"}) {
+                assertEquals(0, find(engineering.path("equipment"), gear).path("purchaseCost").asInt());
+                assertEquals(400, put(c,r,engineer,gear,0).statusCode());
+            }
+            for (String gear : new String[]{"Standard Armour","Gas Mask","Medi-kit","Misericordia"}) {
+                assertEquals(0, find(medical.path("equipment"), gear).path("purchaseCost").asInt());
+                assertEquals(400, put(c,r,medic,gear,0).statusCode());
+            }
+            assertEquals(400, put(c,r,engineer,"Standard Armour",1).statusCode());
+            long sniper = add(c,r,"Sniper Priest");
+            assertEquals(400, put(c,r,sniper,"Misericordia",1).statusCode());
+            assertEquals(90, ok(put(c,r,sniper,"Reinforced Armour",1)).path("unitCost").path("totalCost").asInt());
+            long yeoman = add(c,r,"Yeoman");
+            assertEquals(35, ok(put(c,r,yeoman,"Shovel",1)).path("unitCost").path("totalCost").asInt());
+            assertEquals(400, put(c,r,yeoman,"Engineer Body Armour",1).statusCode());
+        }
+    }
+
+    @Test void trenchMolesUseActualRosterCostAndKeepTheirUpgradeOnReopen() throws Exception {
+        try (var c = new AuthTestClient(port)) {
+            signIn(c,"a");
+            long r = roster(c);
+            String base = "/api/rosters/"+r;
+            long first = add(c,r,"Yeoman"), second = add(c,r,"Yeoman"), third = add(c,r,"Yeoman");
+            long lieutenant = add(c,r,"Lieutenant");
+            assertEquals(400, setMole(c,base,lieutenant,true).statusCode());
+            assertEquals(40, ok(setMole(c,base,first,true)).path("units").get(0).path("costs").path("totalCost").asInt());
+            ok(setMole(c,base,second,true));
+            assertEquals(400, setMole(c,base,third,true).statusCode());
+            long last = 0;
+            for (int i=0;i<28;i++) last = add(c,r,"Yeoman");
+            assertEquals(400, setMole(c,base,third,true).statusCode());
+            long fourth = last;
+            ok(put(c,r,last,"Trench Shield",1));
+            var upgraded = ok(setMole(c,base,third,true));
+            assertTrue(upgraded.path("units").get(2).path("trenchMole").asBoolean());
+            assertEquals(400, setMole(c,base,fourth,true).statusCode());
+            assertTrue(ok(c.get(base+"/units")).path("units").get(2).path("trenchMole").asBoolean());
+            ok(put(c,r,last,"Trench Shield",0));
+            // Actual remaining cost, not the budget, governs the upgrade.
+            assertFalse(ok(c.get(base)).path("unitIssues").isEmpty());
+            var downgraded = ok(setMole(c,base,third,false));
+            assertEquals(30, downgraded.path("units").get(2).path("costs").path("totalCost").asInt());
+        }
+    }
+
+    HttpResponse<String> setMole(AuthTestClient c, String base, long unit, boolean enabled) throws Exception {
+        return c.send(request(c,base+"/units/"+unit+"/trench-mole","{\"enabled\":"+enabled+"}",true));
+    }
+
     @Test void loadoutsAreIndependentPersistentAndUseRecruitmentPrices() throws Exception {
         try(var c=new AuthTestClient(port)) {
             signIn(c,"a");long r=roster(c),u=add(c,r,"Yeoman"),second=add(c,r,"Yeoman");
