@@ -92,7 +92,7 @@ export default function RosterUnits({ rosterId, onRosterUpdated, onBusyChange, o
           <ul className="unit-list saved-unit-list">{savedUnits.map((unit, index) => <li key={unit.id}>
             <button type="button" className="unit-select" aria-pressed={unit.id === selectedId}
               aria-label={`Select ${unit.name} ${index + 1}`} disabled={working} onClick={() => setSelectedId(unit.id)}>
-              <strong>{unit.trenchMole ? "Trench Mole" : unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}</span>
+              <strong>{unit.trenchMole ? "Trench Mole" : unit.name}</strong><span>{unit.type}{unit.costs ? ` · ${unit.costs.totalCost} ducats` : ''}{unit.costs?.glorySpent > 0 && ` · ${unit.costs.glorySpent} Glory`}</span>
             </button>
             <button type="button" disabled={working} aria-label={`Remove ${unit.name} ${index + 1}`}
               onClick={() => perform(signal => removeRosterUnit(rosterId, unit.id, signal), `${unit.name} removed.`)}>Remove</button>

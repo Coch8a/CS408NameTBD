@@ -101,6 +101,7 @@ button:disabled:hover { background: var(--green); }
 .roster-detail h3 { font-size: 18px; font-weight: 700; margin: 0 0 16px; overflow-wrap: anywhere; }
 .roster-detail fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .roster-settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+.roster-settings-grid > :first-child { grid-column: 1 / -1; }
 .roster-actions { display: flex; gap: 8px; margin-top: 18px; }
 .roster-metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 0; }
 .roster-metadata dt { color: var(--muted); font-size: 12px; font-weight: 400; }
@@ -152,6 +153,7 @@ button:disabled:hover { background: var(--green); }
 .recruitment-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 0 20px; max-height: 340px; overflow-y: auto; }
 
 .roster-costs { display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; padding: 10px 0; border-top: 1px solid var(--border); }
+.budget-total { display: grid; gap: 2px; }
 .roster-costs span { color: var(--muted); }
 .roster-costs .budget-warning { color: #efbc77; }
 .roster-issues { margin: 0 0 8px; padding-left: 20px; color: var(--muted); font-size: 13px; }

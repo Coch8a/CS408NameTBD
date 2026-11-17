@@ -17,10 +17,11 @@ public class RosterService {
     private final RosterValidation validation;
     private static final String SELECT = """
             SELECT r.id, r.roster_name, r.faction_id, f.name AS faction_name,
-                   r.ducat_limit, r.created_at, r.updated_at, COALESCE(costs.total_cost,0) AS total_cost,
+                   r.ducat_limit, r.glory_limit, COALESCE(costs.glory_spent,0) AS glory_spent, r.created_at, r.updated_at, COALESCE(costs.total_cost,0) AS total_cost,
                    (SELECT COUNT(*) FROM roster_units ru WHERE ru.roster_id=r.id) AS unit_count
             FROM rosters r JOIN factions f ON f.id=r.faction_id
-            LEFT JOIN (SELECT roster_id,SUM(recruitment_cost+equipment_cost) AS total_cost FROM (
+            LEFT JOIN (SELECT roster_id,SUM(recruitment_cost+equipment_cost) AS total_cost,
+                              SUM(glory_spent) AS glory_spent FROM (
             """ + RosterCostService.UNIT_COSTS + """
             ) unit_costs GROUP BY roster_id) costs ON costs.roster_id=r.id
             """;
@@ -30,7 +31,10 @@ public class RosterService {
             row.getObject("created_at", OffsetDateTime.class).toInstant().toString(),
             row.getObject("updated_at", OffsetDateTime.class).toInstant().toString(), row.getLong("total_cost"),
             row.getLong("ducat_limit") - row.getLong("total_cost"),
-            Math.max(0, row.getLong("total_cost") - row.getLong("ducat_limit")), List.of());
+            Math.max(0, row.getLong("total_cost") - row.getLong("ducat_limit")),
+            row.getInt("glory_limit"), row.getLong("glory_spent"),
+            row.getLong("glory_limit") - row.getLong("glory_spent"),
+            Math.max(0, row.getLong("glory_spent") - row.getLong("glory_limit")), List.of());
 
     public RosterService(JdbcTemplate jdbc, RosterValidation validation) {
         this.jdbc = jdbc;
@@ -61,12 +65,13 @@ public class RosterService {
         var key = new GeneratedKeyHolder();
         jdbc.update(connection -> {
             var statement = connection.prepareStatement("""
-                    INSERT INTO rosters (user_id, faction_id, roster_name, ducat_limit) VALUES (?, ?, ?, ?)
+                    INSERT INTO rosters (user_id, faction_id, roster_name, ducat_limit, glory_limit) VALUES (?, ?, ?, ?, ?)
                     """, new String[]{"id"});
             statement.setLong(1, ownerId);
             statement.setLong(2, request.factionId());
             statement.setString(3, request.rosterName());
             statement.setInt(4, request.ducatLimit());
+            statement.setInt(5, request.gloryLimit() == null ? 0 : request.gloryLimit());
             return statement;
         }, key);
         return get(ownerId, key.getKey().longValue());
@@ -83,9 +88,9 @@ public class RosterService {
         }
         checkFaction(request.factionId());
         jdbc.update("""
-                UPDATE rosters SET roster_name=?, faction_id=?, ducat_limit=?, updated_at=CURRENT_TIMESTAMP
+                UPDATE rosters SET roster_name=?, faction_id=?, ducat_limit=?, glory_limit=COALESCE(?,glory_limit), updated_at=CURRENT_TIMESTAMP
                 WHERE user_id=? AND id=?
-                """, request.rosterName(), request.factionId(), request.ducatLimit(), ownerId, id);
+                """, request.rosterName(), request.factionId(), request.ducatLimit(), request.gloryLimit(), ownerId, id);
         return get(ownerId, id);
     }
 
@@ -114,10 +119,11 @@ public class RosterService {
     public record Faction(long id, String name) {}
     public record Roster(long id, String rosterName, long factionId, String factionName,
                          int ducatLimit, long unitCount, String createdAt, String updatedAt,
-                         long totalCost, long remainingDucats, long overBudget, List<String> unitIssues) {
+                         long totalCost, long remainingDucats, long overBudget,
+                         int gloryLimit, long glorySpent, long remainingGlory, long overGloryBudget, List<String> unitIssues) {
         Roster withUnitIssues(List<String> issues) {
             return new Roster(id, rosterName, factionId, factionName, ducatLimit, unitCount,
-                    createdAt, updatedAt, totalCost, remainingDucats, overBudget, issues);
+                    createdAt, updatedAt, totalCost, remainingDucats, overBudget, gloryLimit, glorySpent, remainingGlory, overGloryBudget, issues);
         }
     }
     public static class MissingRoster extends RuntimeException {}

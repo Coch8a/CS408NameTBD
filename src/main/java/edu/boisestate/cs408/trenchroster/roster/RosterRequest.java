@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 /** Editable roster settings. Ownership always comes from the authenticated session. */
@@ -20,9 +21,16 @@ public record RosterRequest(
         @JsonDeserialize(using = WholeLong.class) Long factionId,
         @NotNull(message = "Enter a ducat limit.")
         @Positive(message = "Enter a positive whole number.")
-        @Max(value = 1000000, message = "Use a limit of at most 1,000,000 ducats.") @JsonDeserialize(using = WholeInteger.class) Integer ducatLimit) {
+        @Max(value = 1000000, message = "Use a limit of at most 1,000,000 ducats.") @JsonDeserialize(using = WholeInteger.class) Integer ducatLimit,
+        @PositiveOrZero(message = "Enter a nonnegative whole number.")
+        @Max(value = 1000000, message = "Use a limit of at most 1,000,000 Glory.")
+        @JsonDeserialize(using = WholeInteger.class) Integer gloryLimit) {
     public RosterRequest {
         if (rosterName != null) rosterName = rosterName.strip();
+    }
+
+    public RosterRequest(String rosterName, Long factionId, Integer ducatLimit) {
+        this(rosterName, factionId, ducatLimit, null);
     }
 
     /** Reject fractional JSON values instead of silently rounding them down. */

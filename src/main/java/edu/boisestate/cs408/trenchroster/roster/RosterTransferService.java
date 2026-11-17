@@ -36,9 +36,9 @@ public class RosterTransferService {
         var view = units.view(owner, id);
         var roster = view.roster();
         Map<Long, List<Gear>> gear = new HashMap<>();
-        Map<Long, Map<String, Integer>> gearPrices = new HashMap<>();
+        Map<Long, Map<String, Price>> gearPrices = new HashMap<>();
         jdbc.query("""
-                SELECT ru.id, e.name, re.quantity, COALESCE(ur.cost_override,e.cost) AS price FROM roster_units ru
+                SELECT ru.id, e.name, re.quantity, e.currency, COALESCE(ur.cost_override,e.cost) AS price FROM roster_units ru
                 JOIN roster_equipment re ON re.roster_unit_id=ru.id JOIN equipment e ON e.id=re.equipment_id
                 LEFT JOIN unit_equipment_rules ur ON ur.unit_id=ru.unit_id AND ur.equipment_id=e.id
                 WHERE ru.roster_id=? ORDER BY ru.id, e.name, e.id
@@ -46,15 +46,16 @@ public class RosterTransferService {
             long entryId = row.getLong("id");
             String name = row.getString("name");
             gear.computeIfAbsent(entryId, key -> new ArrayList<>()).add(new Gear(name, row.getInt("quantity")));
-            gearPrices.computeIfAbsent(entryId, key -> new HashMap<>()).put(name, row.getInt("price"));
+            gearPrices.computeIfAbsent(entryId, key -> new HashMap<>()).put(name, new Price(row.getInt("price"), row.getString("currency")));
         }, id);
         String faction = jdbc.queryForObject("SELECT slug FROM factions WHERE id=?", String.class, roster.factionId());
         var entries = view.units().stream()
                 .map(unit -> new Entry(unit.name(), List.copyOf(gear.getOrDefault(unit.id(), List.of())),
                         unit.trenchMole() ? Boolean.TRUE : null)).toList();
-        var file = new RosterFile(1, roster.rosterName(), faction, roster.ducatLimit(), entries);
-        return new Snapshot(file, roster.factionName(), roster.totalCost(), roster.overBudget(), roster.unitIssues(),
-                view.units().stream().map(unit -> new UnitDetail(unit.type(), unit.costs().totalCost(),
+        var file = new RosterFile(1, roster.rosterName(), faction, roster.ducatLimit(), roster.gloryLimit(), entries);
+        return new Snapshot(file, roster.factionName(), roster.totalCost(), roster.overBudget(), roster.glorySpent(),
+                roster.overGloryBudget(), roster.unitIssues(),
+                view.units().stream().map(unit -> new UnitDetail(unit.type(), unit.costs().totalCost(), unit.costs().glorySpent(),
                         Map.copyOf(gearPrices.getOrDefault(unit.id(), Map.of())))).toList());
     }
 
@@ -67,6 +68,8 @@ public class RosterTransferService {
         String name = name(file.path("name"), "Roster name");
         String faction = name(file.path("faction"), "Faction");
         int limit = integer(file.path("ducatLimit"), "Ducat limit", 1, 1_000_000);
+        var glory = file.path("gloryLimit");
+        int gloryLimit = glory.isMissingNode() ? 0 : integer(glory, "Glory limit", 0, 1_000_000);
         var entries = array(file.path("units"), "Units", 500);
 
         var factions = jdbc.query("SELECT id FROM factions WHERE slug=?",
@@ -75,7 +78,7 @@ public class RosterTransferService {
         long factionId = factions.getFirst();
         var unitIds = ids("SELECT id,name FROM units WHERE faction_id=?", factionId);
         var gearIds = ids("SELECT id,name FROM equipment WHERE faction_id=?", factionId);
-        var roster = rosters.create(owner, new RosterRequest(name, factionId, limit));
+        var roster = rosters.create(owner, new RosterRequest(name, factionId, limit, gloryLimit));
 
         int index = 0;
         for (var entry : entries) {
@@ -141,8 +144,9 @@ public class RosterTransferService {
     public record Gear(String name, int quantity) {}
     public record Entry(String name, List<Gear> equipment,
                         @JsonInclude(JsonInclude.Include.NON_NULL) Boolean trenchMole) {}
-    public record RosterFile(int version, String name, String faction, int ducatLimit, List<Entry> units) {}
-    public record UnitDetail(String type, long totalCost, Map<String, Integer> prices) {}
+    public record RosterFile(int version, String name, String faction, int ducatLimit, int gloryLimit, List<Entry> units) {}
+    public record Price(int amount, String currency) {}
+    public record UnitDetail(String type, long totalCost, long glorySpent, Map<String, Price> prices) {}
     public record Snapshot(RosterFile file, String factionName, long totalCost, long overBudget,
-                           List<String> unitIssues, List<UnitDetail> unitDetails) {}
+                           long glorySpent, long overGloryBudget, List<String> unitIssues, List<UnitDetail> unitDetails) {}
 }

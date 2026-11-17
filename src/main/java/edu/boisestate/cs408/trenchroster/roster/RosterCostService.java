@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 public class RosterCostService {
     static final String UNIT_COSTS = """
             SELECT ru.id,ru.roster_id,(CAST(u.base_cost AS BIGINT) + CASE WHEN ru.trench_mole THEN 10 ELSE 0 END)*ru.quantity AS recruitment_cost,
-                   COALESCE(SUM(CAST(COALESCE(rule.cost_override,e.cost) AS BIGINT)*re.quantity),0)*ru.quantity AS equipment_cost
+                   COALESCE(SUM(CASE WHEN e.currency='ducats'
+                          THEN CAST(COALESCE(rule.cost_override,e.cost) AS BIGINT)*re.quantity ELSE 0 END),0)*ru.quantity AS equipment_cost,
+                   COALESCE(SUM(CASE WHEN e.currency='glory'
+                          THEN CAST(COALESCE(rule.cost_override,e.cost) AS BIGINT)*re.quantity ELSE 0 END),0)*ru.quantity AS glory_spent
             FROM roster_units ru JOIN units u ON u.id=ru.unit_id
             LEFT JOIN roster_equipment re ON re.roster_unit_id=ru.id
             LEFT JOIN equipment e ON e.id=re.equipment_id
@@ -24,12 +27,13 @@ public class RosterCostService {
         var rows = jdbc.query("SELECT c.* FROM (" + UNIT_COSTS + """
                 ) c JOIN rosters r ON r.id=c.roster_id WHERE r.user_id=? AND r.id=? ORDER BY c.id
                 """, (row, index) -> new UnitCost(row.getLong("id"), row.getLong("recruitment_cost"),
-                row.getLong("equipment_cost"), Math.addExact(row.getLong("recruitment_cost"), row.getLong("equipment_cost"))),
+                row.getLong("equipment_cost"), Math.addExact(row.getLong("recruitment_cost"), row.getLong("equipment_cost")),
+                row.getLong("glory_spent")),
                 ownerId, rosterId);
         var result = new LinkedHashMap<Long, UnitCost>();
         rows.forEach(cost -> result.put(cost.rosterUnitId(), cost));
         return result;
     }
 
-    public record UnitCost(long rosterUnitId, long recruitmentCost, long equipmentCost, long totalCost) {}
+    public record UnitCost(long rosterUnitId, long recruitmentCost, long equipmentCost, long totalCost, long glorySpent) {}
 }

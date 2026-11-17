@@ -70,7 +70,7 @@ public class RosterEquipmentService {
         var selected = quantities(unit.entryId());
         var usage = usage(roster.id(), unit.entryId());
         var equipped = jdbc.query("""
-                SELECT e.id,e.name,e.equipment_type,re.quantity,e.cost,
+                SELECT e.id,e.name,e.equipment_type,re.quantity,e.cost,e.currency,
                        COALESCE(ur.cost_override,e.cost) AS purchase_cost,
                        COALESCE(ur.included_in_recruitment,FALSE) AS included
                 FROM roster_equipment re JOIN equipment e ON e.id=re.equipment_id
@@ -78,7 +78,7 @@ public class RosterEquipmentService {
                 WHERE re.roster_unit_id=? ORDER BY e.equipment_type,e.name,e.id
                 """, (row, index) -> new Equipped(row.getLong("id"), row.getString("name"),
                 row.getString("equipment_type"), row.getInt("quantity"), row.getInt("cost"),
-                row.getInt("purchase_cost"), row.getBoolean("included")), unit.unitId(), unit.entryId());
+                row.getInt("purchase_cost"), row.getString("currency"), row.getBoolean("included")), unit.unitId(), unit.entryId());
         var available = rules.values().stream().map(rule -> {
             int quantity = selected.getOrDefault(rule.id(), 0);
             int desired = rule.slot().equals("armour") ? 1 : quantity + 1;
@@ -163,7 +163,6 @@ public class RosterEquipmentService {
         for (var entry : selected.entrySet()) {
             var rule = rules.get(entry.getKey());
             if (rule == null || !rule.allowed()) return "This equipment is not available for this unit.";
-            if (rule.currency().equals("glory")) return "Glory spending is not enabled yet.";
             if (entry.getValue() < 1 || entry.getValue() > rule.max()) return rule.name() + ": maximum " + rule.max() + " per unit.";
             if (rule.limit() > 0 && !rule.limitExempt()
                     && usage.getOrDefault(rule.id(), 0) + entry.getValue() > rule.limit()) {
@@ -231,7 +230,7 @@ public class RosterEquipmentService {
                         int limit, int hands, String slot, String currency, boolean lug, boolean requiresLug, boolean combo,
                         boolean heavy, boolean blocksTrenchShield, boolean requiresMachineArmour, boolean cumbersome, boolean allowed, boolean included, boolean limitExempt, boolean fixed) {}
     public record Equipped(long id, String name, String type, int quantity, int catalogueCost,
-                           int purchaseCost, boolean includedInRecruitment) {}
+                           int purchaseCost, String currency, boolean includedInRecruitment) {}
     public record Option(long id, String name, String type, int catalogueCost, int purchaseCost, int quantity,
                          int maxQuantity, String currency, boolean includedInRecruitment, boolean fixedLoadout, boolean compatible, String reason, boolean canDecrease, String decreaseReason) {}
     public record EquipmentView(RosterService.Roster roster, long rosterUnitId, boolean requiresArmour, RosterCostService.UnitCost unitCost,

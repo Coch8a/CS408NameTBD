@@ -19,8 +19,8 @@ export default function RosterUnitDetails({ unit, rosterId, onUpdated, onBusyCha
         <div><dt>Role</dt><dd>{unit.type}</dd></div>
         <div><dt>Recruitment</dt><dd>{unit.costs?.recruitmentCost ?? recruitmentPrice(unit)} ducats</dd></div>
         {unit.costs && <>
-          <div><dt>Equipment</dt><dd>{unit.costs.equipmentCost} ducats</dd></div>
-          <div><dt>Total</dt><dd>{unit.costs.totalCost} ducats</dd></div>
+          <div><dt>Equipment</dt><dd>{unit.costs.equipmentCost} ducats{unit.costs.glorySpent > 0 && ` · ${unit.costs.glorySpent} Glory`}</dd></div>
+          <div><dt>Total</dt><dd>{unit.costs.totalCost} ducats{unit.costs.glorySpent > 0 && ` · ${unit.costs.glorySpent} Glory`}</dd></div>
         </>}
       </dl>
       <ProfileStats profile={unit.profile} />

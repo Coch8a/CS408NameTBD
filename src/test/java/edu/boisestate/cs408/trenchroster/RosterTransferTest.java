@@ -38,6 +38,7 @@ class RosterTransferTest {
             assertEquals(200, saved.statusCode(), saved.body());
             var snapshot = AuthTestClient.JSON.readTree(saved.body());
             var file = snapshot.path("file");
+            assertEquals(0, file.path("gloryLimit").asInt(-1));
             assertEquals("Yeoman", file.path("units").path(0).path("name").asString());
             assertEquals("Bayonet", file.path("units").path(0).path("equipment").path(0).path("name").asString());
             assertEquals("Pistol", file.path("units").path(1).path("equipment").path(0).path("name").asString());
@@ -64,9 +65,9 @@ class RosterTransferTest {
         try (var client = new AuthTestClient(port)) {
             login(client, name);
             String expanded = """
-                    {"version":1,"name":"Expanded patrol","faction":"new-antioch","ducatLimit":700,"units":[
+                    {"version":1,"name":"Expanded patrol","faction":"new-antioch","ducatLimit":700,"gloryLimit":4,"units":[
                         {"name":"Lieutenant","equipment":[]},
-                        {"name":"Sniper Priest","equipment":[]},
+                        {"name":"Sniper Priest","equipment":[{"name":"Field Shrine","quantity":1},{"name":"Martyrdom Pills","quantity":1}]},
                         {"name":"Trench Cleric","equipment":[]},
                         {"name":"Shock Trooper","equipment":[]},
                         {"name":"Combat Engineer","equipment":[{"name":"Engineer Body Armour","quantity":1},{"name":"Shovel","quantity":1}]},
@@ -81,6 +82,11 @@ class RosterTransferTest {
             long id = AuthTestClient.JSON.readTree(first.body()).path("id").asLong();
             var snapshot = AuthTestClient.JSON.readTree(client.get("/api/rosters/" + id + "/export").body());
             assertEquals(495, snapshot.path("totalCost").asInt());
+            assertEquals(3, snapshot.path("glorySpent").asInt());
+            assertEquals(3, snapshot.path("unitDetails").get(1).path("glorySpent").asInt());
+            var shrine = snapshot.path("unitDetails").get(1).path("prices").path("Field Shrine");
+            assertEquals("glory", shrine.path("currency").asString());
+            assertEquals(2, shrine.path("amount").asInt());
             assertEquals(AuthTestClient.JSON.readTree(expanded), snapshot.path("file"));
             var imported = client.postJson(IMPORT, snapshot.path("file"));
             assertEquals(201, imported.statusCode(), imported.body());
@@ -99,6 +105,7 @@ class RosterTransferTest {
             login(client, name);
             for (String bad : new String[]{"{", ROSTER + "{}", ROSTER.replace("\"version\":1", "\"version\":2"),
                     ROSTER.replace("\"version\":1", "\"version\":1,\"version\":1"),
+                    ROSTER.replace("\"ducatLimit\":50", "\"ducatLimit\":50,\"gloryLimit\":1.5"),
                     ROSTER.replace("Pistol", "Unknown gear"), ROSTER.replace("Pistol", "Bayonet"),
                     ROSTER.replace("\"quantity\":1", "\"quantity\":1.5"),
                     ROSTER.replace("new-antioch", "missing-faction"),

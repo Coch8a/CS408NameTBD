@@ -4,7 +4,7 @@ import { compendiumText } from './compendiumExport.js';
 import { downloadRoster, importRoster, rosterSnapshot } from './rosterTransfer.js';
 import { createRoster, deleteRoster, getRoster, listRosterFactions, listRosters, updateRoster } from './rosterApi.js';
 
-const emptyFields = { rosterName: '', factionId: '', ducatLimit: '700' };
+const emptyFields = { rosterName: '', factionId: '', ducatLimit: '700', gloryLimit: '0' };
 const ordered = rows => [...rows].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || b.id - a.id);
 const dateLabel = value => new Date(value).toLocaleString();
 
@@ -107,7 +107,7 @@ export default function RosterDashboard({ onSessionExpired }) {
     setFieldErrors({});
     setFields(next === 'create'
       ? { ...emptyFields, factionId: String(factions[0]?.id ?? '') }
-      : { rosterName: selected.rosterName, factionId: String(selected.factionId), ducatLimit: String(selected.ducatLimit) });
+      : { rosterName: selected.rosterName, factionId: String(selected.factionId), ducatLimit: String(selected.ducatLimit), gloryLimit: String(selected.gloryLimit ?? 0) });
   }
 
   function open(id) {
@@ -132,10 +132,13 @@ export default function RosterDashboard({ onSessionExpired }) {
     if (!/^\d+$/.test(fields.ducatLimit) || Number(fields.ducatLimit) < 1 || Number(fields.ducatLimit) > 1000000) {
       errors.ducatLimit = 'Enter a whole number from 1 to 1,000,000.';
     }
+    if (!/^\d+$/.test(fields.gloryLimit) || Number(fields.gloryLimit) > 1000000) {
+      errors.gloryLimit = 'Enter a whole number from 0 to 1,000,000.';
+    }
     showErrors(errors);
     if (Object.keys(errors).length) return;
     perform(async signal => {
-      const payload = { rosterName: name, factionId: Number(fields.factionId), ducatLimit: Number(fields.ducatLimit) };
+      const payload = { rosterName: name, factionId: Number(fields.factionId), ducatLimit: Number(fields.ducatLimit), gloryLimit: Number(fields.gloryLimit) };
       const roster = mode === 'create' ? await createRoster(payload, signal) : await updateRoster(selected.id, payload, signal);
       if (signal.aborted) return;
       setRosters(current => ordered([roster, ...current.filter(row => row.id !== roster.id)]));
@@ -226,6 +229,8 @@ export default function RosterDashboard({ onSessionExpired }) {
                 </select>{fieldError('factionId')}</div>
               <div className="account-field"><label htmlFor="roster-limit">Ducat limit</label>
                 <input id="roster-limit" name="ducatLimit" type="number" min="1" max="1000000" step="1" value={fields.ducatLimit} onChange={change} required {...accessibility('ducatLimit')} />{fieldError('ducatLimit')}</div>
+              <div className="account-field"><label htmlFor="glory-limit">Glory limit</label>
+                <input id="glory-limit" name="gloryLimit" type="number" min="0" max="1000000" step="1" value={fields.gloryLimit} onChange={change} required {...accessibility('gloryLimit')} />{fieldError('gloryLimit')}</div>
             </div>
             <div className="roster-actions"><button type="submit">{mode === 'create' ? 'Create roster' : 'Save changes'}</button>
               <button type="button" onClick={() => { setMode('view'); setError(''); setFieldErrors({}); }}>Cancel</button></div>
@@ -242,10 +247,18 @@ export default function RosterDashboard({ onSessionExpired }) {
             <div><dt>Last saved</dt><dd><time dateTime={selected.updatedAt}>{dateLabel(selected.updatedAt)}</time></dd></div>
           </dl>
           {selected.totalCost !== undefined && <div className="roster-costs" aria-live="polite">
-            <strong>{selected.totalCost.toLocaleString()} / {selected.ducatLimit.toLocaleString()} ducats</strong>
-            <span className={selected.overBudget > 0 ? 'budget-warning' : ''}>
-              {selected.overBudget > 0 ? `${selected.overBudget.toLocaleString()} ducats over budget` : `${selected.remainingDucats.toLocaleString()} remaining`}
-            </span>
+            <div className="budget-total">
+              <strong>{selected.totalCost.toLocaleString()} / {selected.ducatLimit.toLocaleString()} ducats</strong>
+              <span className={selected.overBudget > 0 ? 'budget-warning' : ''}>
+                {selected.overBudget > 0 ? `${selected.overBudget.toLocaleString()} ducats over budget` : `${selected.remainingDucats.toLocaleString()} remaining`}
+              </span>
+            </div>
+            <div className="budget-total">
+              <strong>{(selected.glorySpent ?? 0).toLocaleString()} / {(selected.gloryLimit ?? 0).toLocaleString()} Glory</strong>
+              <span className={selected.overGloryBudget > 0 ? 'budget-warning' : ''}>
+                {selected.overGloryBudget > 0 ? `${selected.overGloryBudget.toLocaleString()} Glory over budget` : `${(selected.remainingGlory ?? 0).toLocaleString()} remaining`}
+              </span>
+            </div>
           </div>}
           <div aria-live="polite">
             {selected.unitIssues?.length > 0 && <ul className="roster-issues" aria-label="Roster issues">

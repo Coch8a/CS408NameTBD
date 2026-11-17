@@ -8,9 +8,9 @@ it('matches the archived Compendium export with elite and infantry entries, alia
     { name: 'Mechanized Heavy Infantry', equipment: [{ name: 'Machine Armour', quantity: 1 }] },
   ] };
   const unitDetails = [
-    { type: 'Infantry', totalCost: 35, prices: { 'Bolt-Action Rifle': 5 } },
-    { type: 'Leader', totalCost: 82, prices: { Pistol: 6 } },
-    { type: 'Heavy infantry', totalCost: 95, prices: { 'Machine Armour': 10 } },
+    { type: 'Infantry', totalCost: 35, prices: { 'Bolt-Action Rifle': { amount: 5, currency: 'ducats' } } },
+    { type: 'Leader', totalCost: 82, prices: { Pistol: { amount: 6, currency: 'ducats' } } },
+    { type: 'Heavy infantry', totalCost: 95, prices: { 'Machine Armour': { amount: 10, currency: 'ducats' } } },
   ];
   const expected = [
     "```",
@@ -57,4 +57,18 @@ it('exports the new elites and the legacy Shocktrooper and Infiltrator names', (
   expect(elites).toContain('Trench Cleric | Trench Cleric | 60 ducats');
   expect(troops).toContain('Shocktrooper | Shocktrooper | 45 ducats');
   expect(troops).toMatch(/Yeoman \| Yeoman \| 40 ducats 0 glory -+\n\[ UPGRADES \]\n-Infiltrator \(10 ducats\)/);
+});
+
+it('preserves separate Ducat and Glory prices in Compendium text', () => {
+  const file = { name: 'Patrol', faction: 'new-antioch', ducatLimit: 800, gloryLimit: 6, units: [
+    { name: 'Lieutenant', equipment: [{ name: 'Pistol', quantity: 1 }, { name: 'Field Shrine', quantity: 1 }] },
+  ] };
+  const unitDetails = [{ type: 'Leader', totalCost: 76, glorySpent: 2, prices: {
+    Pistol: { amount: 6, currency: 'ducats' }, 'Field Shrine': { amount: 2, currency: 'glory' },
+  } }];
+  const text = compendiumText({ file, totalCost: 76, glorySpent: 2, unitDetails });
+  expect(text).toMatch(/\[ GLORY \] Total : 6 +\| Spent : 2 \(0 Lost\) +\| Available : 4/);
+  expect(text).toContain('Lieutenant | Lieutenant | 76 ducats 2 glory');
+  expect(text).toContain('-Pistol (6 ducats)');
+  expect(text).toContain('-Field Shrine (2 glory)');
 });

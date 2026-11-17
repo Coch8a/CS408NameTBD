@@ -169,7 +169,7 @@ class RosterEquipmentTest {
             assertEquals(400,put(c,r,v,"Pistol",3).statusCode());
         }
     }
-    @Test void expandedArmouryEnforcesConditionalKitAndKeepsGloryOutOfDucatCosts() throws Exception {
+    @Test void expandedArmouryEnforcesConditionalKitAndTracksGlorySeparately() throws Exception {
         try (var client = new AuthTestClient(port)) {
             signIn(client, "a");
             long r = roster(client), elite = add(client,r,"Lieutenant"), troop = add(client,r,"Yeoman");
@@ -180,7 +180,23 @@ class RosterEquipmentTest {
             assertEquals(400, put(client,r,elite,"Trench Knife",1).statusCode());
             var shrine = find(ok(client.get(path(r,elite))).path("availableEquipment"), "Field Shrine");
             assertEquals("glory", shrine.path("currency").asString());
-            assertEquals(400, put(client,r,elite,"Field Shrine",1).statusCode());
+            var withShrine = ok(put(client,r,elite,"Field Shrine",1));
+            assertEquals(105, withShrine.path("unitCost").path("totalCost").asInt());
+            assertEquals(2, withShrine.path("unitCost").path("glorySpent").asInt());
+            assertEquals(2, withShrine.path("roster").path("overGloryBudget").asInt());
+            String route = "/api/rosters/" + r;
+            String limits = "{\"rosterName\":\"Equipment check\",\"factionId\":"
+                    + withShrine.path("roster").path("factionId").asLong() + ",\"ducatLimit\":700,\"gloryLimit\":";
+            assertEquals(400, client.send(request(client,route,limits+"-1}",true)).statusCode());
+            var adjusted = ok(client.send(request(client,route,limits+"6}",true)));
+            assertEquals(6, adjusted.path("gloryLimit").asInt());
+            assertEquals(4, adjusted.path("remainingGlory").asInt());
+            assertEquals(0, adjusted.path("overGloryBudget").asInt());
+            var withoutShrine = ok(put(client,r,elite,"Field Shrine",0));
+            assertEquals(105, withoutShrine.path("unitCost").path("totalCost").asInt());
+            assertEquals(0, withoutShrine.path("roster").path("glorySpent").asInt());
+            assertEquals(400, put(client,r,troop,"Martyrdom Pills",1).statusCode());
+            assertEquals(400, put(client,r,elite,"Troop Flag",1).statusCode());
 
             ok(put(client,r,troop,"Grenade Launcher",1));
             assertEquals(400, put(client,r,troop,"Satchel Charge",1).statusCode());

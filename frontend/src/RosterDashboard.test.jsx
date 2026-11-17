@@ -38,7 +38,7 @@ describe('Saved roster dashboard', () => {
     change('Roster name', '  First Company  ');
     fireEvent.submit(screen.getByRole('form', { name: 'Create roster' }));
     await screen.findByRole('heading', { name: 'First Company' });
-    expect(api.createRoster).toHaveBeenCalledWith({ rosterName: 'First Company', factionId: 2, ducatLimit: 700 }, expect.any(AbortSignal));
+    expect(api.createRoster).toHaveBeenCalledWith({ rosterName: 'First Company', factionId: 2, ducatLimit: 700, gloryLimit: 0 }, expect.any(AbortSignal));
     expect(screen.getByText('Roster created.')).toBeTruthy();
     expect(screen.queryByRole('form')).toBeNull();
   });
@@ -55,14 +55,14 @@ describe('Saved roster dashboard', () => {
     expect(api.createRoster).not.toHaveBeenCalled();
   });
   it('opens a saved roster and persists edited settings', async () => {
-    api.updateRoster.mockResolvedValue({ ...roster, rosterName: 'Second Company', ducatLimit: 900 });
+    api.updateRoster.mockResolvedValue({ ...roster, rosterName: 'Second Company', ducatLimit: 900, gloryLimit: 6 });
     await ready(); await open();
     fireEvent.click(screen.getByRole('button', { name: 'Edit settings' }));
     expect(screen.getByLabelText('Roster name').value).toBe('First Company');
-    change('Roster name', 'Second Company'); change('Ducat limit', '900');
+    change('Roster name', 'Second Company'); change('Ducat limit', '900'); change('Glory limit', '6');
     fireEvent.submit(screen.getByRole('form', { name: 'Edit roster settings' }));
     await screen.findByRole('heading', { name: 'Second Company' });
-    expect(api.updateRoster).toHaveBeenCalledWith(12, { rosterName: 'Second Company', factionId: 2, ducatLimit: 900 }, expect.any(AbortSignal));
+    expect(api.updateRoster).toHaveBeenCalledWith(12, { rosterName: 'Second Company', factionId: 2, ducatLimit: 900, gloryLimit: 6 }, expect.any(AbortSignal));
     expect(screen.getByText('Roster settings saved.')).toBeTruthy();
   });
   it('cancels edits without changing the saved roster', async () => {
@@ -150,7 +150,7 @@ describe('Saved roster dashboard', () => {
 
 it('shows the required unit warning and clears it after a successful add', async () => {
   const draft = { ...roster, totalCost: 0, overBudget: 0, remainingDucats: 700,
-    unitIssues: ['Add a Lieutenant.'] };
+    gloryLimit: 1, glorySpent: 2, overGloryBudget: 1, unitIssues: ['Add a Lieutenant.'] };
   const lieutenant = { id: 3, name: 'Lieutenant', type: 'Leader', cost: 70 };
   api.getRoster.mockResolvedValue(draft);
   api.getRosterUnits.mockResolvedValue({ roster: draft, units: [], availableUnits: [lieutenant] });
@@ -162,5 +162,7 @@ it('shows the required unit warning and clears it after a successful add', async
   expect(screen.getByRole('list', { name: 'Roster issues' }).textContent).toContain('Add a Lieutenant.');
   fireEvent.click(await screen.findByRole('button', { name: 'Add Lieutenant' }));
   await screen.findByText('70 / 700 ducats');
+  expect(screen.getByText('2 / 1 Glory')).toBeTruthy();
+  expect(screen.getByText('1 Glory over budget')).toBeTruthy();
   expect(screen.queryByRole('list', { name: 'Roster issues' })).toBeNull();
 });
